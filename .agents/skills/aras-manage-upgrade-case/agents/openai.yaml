@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aras 升級案件管理"
+  short_description: "建立、檢查、恢復及追蹤可稽核的 Aras 升級案件"
+  default_prompt: "使用 $aras-manage-upgrade-case 檢查案件清單、升級路徑、任務關卡與執行歷程。"

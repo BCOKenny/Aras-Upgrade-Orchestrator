@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArasUpgradeOrchestrator.Core", "src\ArasUpgradeOrchestrator.Core\ArasUpgradeOrchestrator.Core.csproj", "{23EBB6EA-5D32-4D0B-ABF3-57BFA4BE991A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArasUpgradeOrchestrator.Core.Tests", "tests\ArasUpgradeOrchestrator.Core.Tests\ArasUpgradeOrchestrator.Core.Tests.csproj", "{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{23EBB6EA-5D32-4D0B-ABF3-57BFA4BE991A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23EBB6EA-5D32-4D0B-ABF3-57BFA4BE991A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23EBB6EA-5D32-4D0B-ABF3-57BFA4BE991A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23EBB6EA-5D32-4D0B-ABF3-57BFA4BE991A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

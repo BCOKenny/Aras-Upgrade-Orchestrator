@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aras Innovator 升級協調"
+  short_description: "路由並協調 Aras 升級階段、安全關卡、證據與交接"
+  default_prompt: "使用 $aras-innovator-upgrade 判斷目前升級階段、選擇功能 Skill，並列出下一個安全動作。"

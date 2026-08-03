@@ -1,0 +1,4 @@
+interface:
+  display_name: "建立客戶 Package"
+  short_description: "安全鎖定並追蹤一次性客戶 Package 基準產生流程"
+  default_prompt: "使用 $aras-build-customer-package 檢查並推進客戶 Package 一次性產生流程。"
