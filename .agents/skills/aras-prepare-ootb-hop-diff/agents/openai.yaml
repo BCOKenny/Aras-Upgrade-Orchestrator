@@ -1,0 +1,4 @@
+interface:
+  display_name: "準備 OOTB 跳點差異"
+  short_description: "建立並驗證 Rule 1 OOTB 雙端可攜式差異包"
+  default_prompt: "使用 $aras-prepare-ootb-hop-diff 建立或驗證 Rule 1 OOTB 跳點差異包。"

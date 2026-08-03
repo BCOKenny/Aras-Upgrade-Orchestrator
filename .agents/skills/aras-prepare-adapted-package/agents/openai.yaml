@@ -1,0 +1,4 @@
+interface:
+  display_name: "準備正式適配 Package"
+  short_description: "以 Rule 2 建立並驗證跳點正式適配 Package"
+  default_prompt: "使用 $aras-prepare-adapted-package 準備或驗證 Rule 2 正式適配 Package。"
