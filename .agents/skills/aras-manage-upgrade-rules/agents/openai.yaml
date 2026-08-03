@@ -1,0 +1,4 @@
+interface:
+  display_name: "管理升級規則"
+  short_description: "驗證、發布並解析不可變的 Rule 1／Rule 2 規則版本"
+  default_prompt: "使用 $aras-manage-upgrade-rules 檢查規則草稿、人工發布資格與版本例外衝突。"

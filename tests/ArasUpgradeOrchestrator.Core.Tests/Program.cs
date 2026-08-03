@@ -2,6 +2,7 @@ using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.Execution;
 using ArasUpgradeOrchestrator.Core.Packages;
+using ArasUpgradeOrchestrator.Core.Rules;
 using ArasUpgradeOrchestrator.Core.Safety;
 using ArasUpgradeOrchestrator.Core.Tasks;
 
@@ -35,6 +36,36 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Package XML 僅依根目錄相對路徑配對", PackageXmlPairsByRelativePathOnly)
     ,("AML 語意相等忽略格式 Attribute 與 Relationship 順序", AmlSemanticEqualityIgnoresPureFormatting)
     ,("AML 語意比較將重複 Scalar Property 轉人工確認", AmlSemanticEqualityBlocksAmbiguousScalarProperties)
+    ,("預設 Rule 2 規則集包含可驗證的七個步驟", DefaultRule2DraftContainsValidatedSteps)
+    ,("規則草稿拒絕重複順序與不支援步驟", RuleDraftValidationRejectsAmbiguity)
+    ,("AI 不得建立或發布規則版本", AiCannotCreateOrPublishRules)
+    ,("規則發布只追加不可覆寫版本", PublishedRuleVersionsAreImmutable)
+    ,("規則儲存拒絕冒用建立者與已發布內容竄改", RuleStoreRejectsIdentityMismatchAndTampering)
+    ,("版本例外依 StepId 覆蓋共用規則", VersionExceptionOverridesCommonStep)
+    ,("多個版本例外對同一步驟結果不同時阻擋", ConflictingVersionExceptionsAreBlocked)
+    ,("規則管理 Skill 引用正式受測核心並限制 AI 權限", RuleManagementSkillReferencesTestedCore)
+    ,("Rule 1 依四種 Item 結果產生 SourceDiff 與 TargetDiff", Rule1ProducesTwoSidedItemDiff)
+    ,("Rule 1 遇到同側重複 CompareKey 時保留兩端並轉人工確認", Rule1RetainsAmbiguousPairing)
+    ,("Rule 1 遇到不可靠 Scalar Property 配對時保留差異並轉人工確認", Rule1RecordsSemanticManualReview)
+    ,("OOTB 跳點差異建立器只寫入新產出並保持原始 Package 不變", OotbHopDiffBuilderPreservesInputs)
+    ,("OOTB 跳點差異建立器隔離單一 XML 錯誤並保持整體阻擋", OotbHopDiffBuilderIsolatesXmlErrors)
+    ,("完成的 OOTB 跳點差異封裝雙端內容並以單一 Checksum 驗證重用", OotbHopDiffArtifactPackagesAndVerifies)
+    ,("未解除人工確認時只保存 Incomplete 摘要且不產生封裝", BlockedOotbHopDiffCannotBePackaged)
+    ,("OOTB 跳點差異封裝缺少任一端內容時不得重用", OotbHopDiffVerifierRequiresBothSides)
+    ,("OOTB 跳點差異 Skill 引用正式核心並守住不可變輸入", OotbHopDiffSkillReferencesTestedCore)
+    ,("OOTB 跳點差異固定共同規則與版本例外的解析快照", OotbHopDiffPinsResolvedRuleSnapshot)
+    ,("OOTB 跳點差異封裝缺少處理摘要時不得重用", OotbHopDiffVerifierRequiresSummary)
+    ,("OOTB 跳點差異封裝含路徑逸出項目時不得重用", OotbHopDiffVerifierRejectsUnsafeEntries)
+    ,("Rule 2 依七步規則更新直接 Scalar 且不修改 Item Attribute", Rule2AppliesSevenScalarSteps)
+    ,("Rule 2 遞迴處理 Relationship 並轉換 federated Property", Rule2RecursesAndCopiesFederatedProperty)
+    ,("Rule 2 遇到重複 Scalar 時局部繼續但整體阻擋", Rule2AmbiguousScalarRequiresManualReview)
+    ,("正式適配 Package 先驗證差異包與備份再建立雙端工作副本", AdaptedPackagePreparesAfterVerificationAndBackup)
+    ,("Solutions 備份失敗時 Rule 2 不得寫入任何工作副本", AdaptedPackageBackupFailurePreservesSolutions)
+    ,("正式適配 Package Skill 引用受測核心與備份關卡", AdaptedPackageSkillReferencesTestedCore)
+    ,("Package 整合拒絕將已驗證差異包套用到不同跳點", PackageIntegrationRejectsHopIdentityMismatch)
+    ,("Package 整合由一次性基準串接 Rule 1 與 Rule 2 完成正式適配", PackageIntegrationCompletesEndToEnd)
+    ,("Package 整合在 Rule 1 封裝遭竄改時保持 Solutions 零寫入", PackageIntegrationRejectsTamperedArtifactBeforeWrite)
+    ,("Package 整合在 Rule 2 人工確認未解除時阻擋正式完成", PackageIntegrationBlocksFinalizationForManualReview)
 };
 
 var failures = new List<string>();
@@ -575,6 +606,710 @@ static Task AmlSemanticEqualityBlocksAmbiguousScalarProperties()
     Assert.True(result.Issues.Any(issue => issue.Code == AmlComparisonIssueCode.DuplicateScalarProperty));
     Assert.True(result.Issues.Any(issue => issue.LeftPath?.Contains("ScalarProperty[name=label]", StringComparison.Ordinal) == true));
     return Task.CompletedTask;
+}
+
+static Task DefaultRule2DraftContainsValidatedSteps()
+{
+    var draft = DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.Parse("2026-08-03T00:00:00Z"));
+    var validation = RuleSetValidator.Validate(draft);
+
+    Assert.True(validation.IsValid, string.Join("; ", validation.Errors.Select(error => error.Message)));
+    Assert.Equal(RuleSetScope.Common, draft.Scope);
+    Assert.SequenceEqual(new[]
+    {
+        RuleStepKind.RemoveEqualScalarProperties,
+        RuleStepKind.RemoveNamedProperties,
+        RuleStepKind.PreferGreaterSourceNumber,
+        RuleStepKind.PreferSourceUnderTargetPath,
+        RuleStepKind.KeepTargetForValuePairs,
+        RuleStepKind.KeepTargetNamedProperties,
+        RuleStepKind.DefaultPreferSourceUnlessSourceEmpty
+    }, draft.Steps.OrderBy(step => step.Order).Select(step => step.Kind));
+    Assert.True(draft.Steps.Single(step => step.Kind == RuleStepKind.RemoveNamedProperties).PropertyNames.Contains("sort_order"));
+    Assert.True(draft.Steps.Single(step => step.Kind == RuleStepKind.KeepTargetForValuePairs).ValuePairs.Any(pair =>
+        pair.PropertyName == "font_color" && pair.Source.Kind == RuleValueConditionKind.Exact && pair.Source.Value == "#000000" &&
+        pair.Target.Kind == RuleValueConditionKind.Exact && pair.Target.Value == "#333333"));
+    Assert.True(draft.Steps.Single(step => step.Kind == RuleStepKind.KeepTargetForValuePairs).ValuePairs.Any(pair =>
+        pair.PropertyName == "label" && pair.Source.Kind == RuleValueConditionKind.Empty && pair.Target.Kind == RuleValueConditionKind.NonEmpty));
+    return Task.CompletedTask;
+}
+
+static Task RuleDraftValidationRejectsAmbiguity()
+{
+    var valid = DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.UtcNow);
+    var invalid = valid with
+    {
+        Steps =
+        [
+            valid.Steps[0],
+            valid.Steps[1] with { Order = valid.Steps[0].Order },
+            new RuleStepDefinition("unsafe", 9, (RuleStepKind)999, [], [], null)
+        ]
+    };
+
+    var result = RuleSetValidator.Validate(invalid);
+    Assert.False(result.IsValid);
+    Assert.True(result.Errors.Any(error => error.Code == RuleValidationErrorCode.DuplicateStepOrder));
+    Assert.True(result.Errors.Any(error => error.Code == RuleValidationErrorCode.UnsupportedStep));
+    return Task.CompletedTask;
+}
+
+static async Task AiCannotCreateOrPublishRules()
+{
+    await using var scope = TestScope.Create();
+    var store = new RuleSetStore(Path.Combine(scope.ToolDataRoot, "rules"));
+    var draft = DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.UtcNow);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveDraftAsync(draft, new RuleActor("codex", RuleActorKind.Ai)));
+    await store.SaveDraftAsync(draft, new RuleActor("operator", RuleActorKind.Human));
+    await Assert.ThrowsAsync<InvalidOperationException>(() => store.PublishAsync(
+        draft.DraftId,
+        new RulePublicationApproval(new RuleActor("codex", RuleActorKind.Ai), "approval-1")));
+}
+
+static async Task PublishedRuleVersionsAreImmutable()
+{
+    await using var scope = TestScope.Create();
+    var store = new RuleSetStore(Path.Combine(scope.ToolDataRoot, "rules"), () => DateTimeOffset.Parse("2026-08-03T01:00:00Z"));
+    var actor = new RuleActor("operator", RuleActorKind.Human);
+    var firstDraft = DefaultUpgradeRuleSets.CreateRule2Draft(actor.Name, DateTimeOffset.UtcNow);
+    await store.SaveDraftAsync(firstDraft, actor);
+    var first = await store.PublishAsync(firstDraft.DraftId, new RulePublicationApproval(actor, "approval-v1"));
+    var secondDraft = firstDraft with
+    {
+        DraftId = Guid.NewGuid(),
+        DisplayName = "Rule 2 common v2",
+        Steps = firstDraft.Steps.Select(step => step.StepId == "remove-named-properties"
+            ? step with { PropertyNames = [.. step.PropertyNames, "new_property"] }
+            : step).ToArray()
+    };
+    await store.SaveDraftAsync(secondDraft, actor);
+    var second = await store.PublishAsync(secondDraft.DraftId, new RulePublicationApproval(actor, "approval-v2"));
+
+    Assert.Equal(1, first.Version);
+    Assert.Equal(2, second.Version);
+    Assert.NotEqual(first.ContentChecksum, second.ContentChecksum);
+    Assert.Equal(firstDraft.DisplayName, (await store.GetPublishedAsync(first.RuleSetId, 1)).DisplayName);
+    Assert.Equal(2, (await store.ListPublishedAsync()).Count);
+}
+
+static async Task RuleStoreRejectsIdentityMismatchAndTampering()
+{
+    await using var scope = TestScope.Create();
+    var root = Path.Combine(scope.ToolDataRoot, "rules");
+    var store = new RuleSetStore(root);
+    var draft = DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow);
+    await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveDraftAsync(draft, new RuleActor("other", RuleActorKind.Human)));
+    await store.SaveDraftAsync(draft, new RuleActor("operator", RuleActorKind.Human));
+    var published = await store.PublishAsync(draft.DraftId,
+        new RulePublicationApproval(new RuleActor("operator", RuleActorKind.Human), "approval"));
+    var path = Path.Combine(root, "published", published.RuleSetId.ToString("N"), "00000001.json");
+    var content = await File.ReadAllTextAsync(path);
+    await File.WriteAllTextAsync(path, content.Replace(published.ContentChecksum, new string('0', 64), StringComparison.Ordinal));
+
+    await Assert.ThrowsAsync<InvalidDataException>(() => store.GetPublishedAsync(published.RuleSetId, 1));
+}
+
+static Task VersionExceptionOverridesCommonStep()
+{
+    var commonDraft = DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.UtcNow);
+    var common = Published(commonDraft, 3);
+    var replacement = commonDraft.Steps.Single(step => step.StepId == "default-prefer-source") with
+    {
+        Kind = RuleStepKind.KeepTargetNamedProperties,
+        PropertyNames = ["name"]
+    };
+    var exception = Published(new RuleSetDraft(
+        Guid.NewGuid(), Guid.NewGuid(), "11SP5 to R38 exception", RuleSetKind.Rule2, RuleSetScope.VersionException,
+        "11SP5", "R38", [replacement], DateTimeOffset.UtcNow, "operator"), 1);
+
+    var result = RuleSetResolver.Resolve([common, exception], RuleSetKind.Rule2, "11SP5", "R38");
+    Assert.Equal(RuleResolutionStatus.Resolved, result.Status);
+    Assert.Equal(RuleStepKind.KeepTargetNamedProperties, result.Steps.Single(step => step.StepId == "default-prefer-source").Kind);
+    Assert.SequenceEqual(new[] { 3, 1 }, result.PinnedVersions.Select(reference => reference.Version));
+    return Task.CompletedTask;
+}
+
+static Task ConflictingVersionExceptionsAreBlocked()
+{
+    var commonDraft = DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.UtcNow);
+    var common = Published(commonDraft, 1);
+    var baseStep = commonDraft.Steps.Single(step => step.StepId == "default-prefer-source");
+    PublishedRuleSet Exception(string propertyName) => Published(new RuleSetDraft(
+        Guid.NewGuid(), Guid.NewGuid(), $"exception-{propertyName}", RuleSetKind.Rule2, RuleSetScope.VersionException,
+        "11SP5", "R38", [baseStep with { Kind = RuleStepKind.KeepTargetNamedProperties, PropertyNames = [propertyName] }],
+        DateTimeOffset.UtcNow, "operator"), 1);
+
+    var result = RuleSetResolver.Resolve([common, Exception("name"), Exception("label")], RuleSetKind.Rule2, "11SP5", "R38");
+    Assert.Equal(RuleResolutionStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == RuleResolutionIssueCode.ConflictingVersionExceptions));
+    Assert.False(result.Steps.Any(step => step.StepId == "default-prefer-source"));
+    Assert.Equal(common.Steps.Count - 1, result.Steps.Count);
+    return Task.CompletedTask;
+}
+
+static PublishedRuleSet Published(RuleSetDraft draft, int version) => PublishedRuleSet.Create(
+    draft, version, DateTimeOffset.Parse("2026-08-03T01:00:00Z"), "operator", $"approval-v{version}");
+
+static Task RuleManagementSkillReferencesTestedCore()
+{
+    var skillRoot = ProjectPath(".agents", "skills", "aras-manage-upgrade-rules");
+    var skill = File.ReadAllText(Path.Combine(skillRoot, "SKILL.md"));
+    var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
+    AssertSkillFrontmatter(skill, "aras-manage-upgrade-rules");
+    AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-manage-upgrade-rules");
+    foreach (var typeName in new[] { "RuleSetValidator", "RuleSetStore", "RuleSetResolver", "DefaultUpgradeRuleSets" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"規則管理核心能力對照缺少 {typeName}。 ");
+    Assert.True(skill.Contains("AI 不得建立、修改、發布或啟用規則", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不得手工改寫已發布版本", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不執行 Rule 1 或 Rule 2", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static Task Rule1ProducesTwoSidedItemDiff()
+{
+    var source = AmlDocument.Parse("""
+        <?xml version="1.0" encoding="utf-8"?>
+        <AML>
+          <Item type="Part" id="SOURCE" action="add"><name>source only</name></Item>
+          <Item type="Part" id="SAME" action="edit"><name>same</name></Item>
+          <Item type="Part" id="CHANGED" action="edit"><name>before</name></Item>
+        </AML>
+        """);
+    var target = AmlDocument.Parse("""
+        <?xml version="1.0" encoding="utf-8"?>
+        <AML>
+          <Item type="Part" id="TARGET" action="add"><name>target only</name></Item>
+          <Item type="Part" id="SAME" action="edit"><name>same</name></Item>
+          <Item type="Part" id="CHANGED" action="edit"><name>after</name></Item>
+        </AML>
+        """);
+
+    var result = Rule1DiffEngine.Compare(source, target);
+
+    Assert.SequenceEqual(new[] { "CHANGED" }, result.SourceDiff.TopLevelItems.Select(item => item.ItemId));
+    Assert.SequenceEqual(new[] { "TARGET", "CHANGED" }, result.TargetDiff.TopLevelItems.Select(item => item.ItemId));
+    Assert.Equal(1, result.Summary.SourceOnlyDeleted);
+    Assert.Equal(1, result.Summary.TargetOnlyRetained);
+    Assert.Equal(1, result.Summary.EqualPairsDeleted);
+    Assert.Equal(1, result.Summary.DifferentPairsRetained);
+    Assert.Equal(0, result.ManualReviews.Count);
+    Assert.True(result.SourceDiff.ToXml().StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\"?>", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static Task Rule1RetainsAmbiguousPairing()
+{
+    var source = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"DUP\" action=\"edit\"><name>source</name></Item></AML>");
+    var target = AmlDocument.Parse("""
+        <AML>
+          <Item type="Part" id="DUP" action="edit"><name>target one</name></Item>
+          <Item type="part" id="dup" action="EDIT"><name>target two</name></Item>
+        </AML>
+        """);
+
+    var result = Rule1DiffEngine.Compare(source, target);
+
+    Assert.Equal(1, result.SourceDiff.TopLevelItems.Count);
+    Assert.Equal(2, result.TargetDiff.TopLevelItems.Count);
+    Assert.Equal(0, result.Summary.SourceOnlyDeleted);
+    Assert.Equal(0, result.Summary.TargetOnlyRetained);
+    Assert.Equal(2, result.ManualReviews.Count);
+    return Task.CompletedTask;
+}
+
+static Task Rule1RecordsSemanticManualReview()
+{
+    var source = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>A</label><label>B</label></Item></AML>");
+    var target = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>A</label></Item></AML>");
+
+    var result = Rule1DiffEngine.Compare(source, target);
+
+    Assert.Equal(1, result.SourceDiff.TopLevelItems.Count);
+    Assert.Equal(1, result.TargetDiff.TopLevelItems.Count);
+    Assert.True(result.ManualReviews.Any(review => review.Code == "DuplicateScalarProperty"));
+    Assert.Equal(0, result.Summary.DifferentPairsRetained);
+    return Task.CompletedTask;
+}
+
+static async Task OotbHopDiffBuilderPreservesInputs()
+{
+    await using var scope = TestScope.Create();
+    var sourceRoot = Path.Combine(scope.Root, "ootb-source");
+    var targetRoot = Path.Combine(scope.Root, "ootb-target");
+    var outputRoot = Path.Combine(scope.Root, "attempt-output");
+    Directory.CreateDirectory(Path.Combine(sourceRoot, "nested"));
+    Directory.CreateDirectory(Path.Combine(targetRoot, "other"));
+    const string sourceXml = "<AML><Item type=\"Part\" id=\"SOURCE\" action=\"add\"/><Item type=\"Part\" id=\"CHANGED\" action=\"edit\"><name>before</name></Item></AML>";
+    const string targetXml = "<AML><Item type=\"Part\" id=\"TARGET\" action=\"add\"/><Item type=\"Part\" id=\"CHANGED\" action=\"edit\"><name>after</name></Item></AML>";
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, "paired.xml"), sourceXml);
+    await File.WriteAllTextAsync(Path.Combine(targetRoot, "paired.xml"), targetXml);
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, "nested", "only.xml"), "<AML><Item type=\"Part\" id=\"S\" action=\"add\"/></AML>");
+    await File.WriteAllTextAsync(Path.Combine(targetRoot, "other", "only.xml"), "<AML><Item type=\"Part\" id=\"T\" action=\"add\"/></AML>");
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, "ignored.txt"), "unchanged");
+    var rule = Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 2);
+
+    var result = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(
+        Guid.NewGuid(), "12SP9", "12SP18", sourceRoot, targetRoot, outputRoot, ResolvedRule1(rule, "12SP9", "12SP18"),
+        DateTimeOffset.Parse("2026-08-03T02:00:00Z")));
+
+    Assert.Equal(OotbHopDiffBuildStatus.ReadyToPackage, result.Status);
+    Assert.Equal(sourceXml, await File.ReadAllTextAsync(Path.Combine(sourceRoot, "paired.xml")));
+    Assert.Equal(targetXml, await File.ReadAllTextAsync(Path.Combine(targetRoot, "paired.xml")));
+    Assert.False(File.Exists(Path.Combine(result.SourceDiffRoot, "ignored.txt")));
+    Assert.SequenceEqual(new[] { "CHANGED" }, AmlDocument.Load(Path.Combine(result.SourceDiffRoot, "paired.xml")).TopLevelItems.Select(item => item.ItemId));
+    Assert.SequenceEqual(new[] { "TARGET", "CHANGED" }, AmlDocument.Load(Path.Combine(result.TargetDiffRoot, "paired.xml")).TopLevelItems.Select(item => item.ItemId));
+    Assert.Equal(0, AmlDocument.Load(Path.Combine(result.SourceDiffRoot, "nested", "only.xml")).TopLevelItems.Count);
+    Assert.Equal("T", AmlDocument.Load(Path.Combine(result.TargetDiffRoot, "other", "only.xml")).TopLevelItems.Single().ItemId);
+    Assert.Equal(3, result.Summary.XmlFilesProcessed);
+    Assert.Equal(0, result.Errors.Count);
+}
+
+static async Task OotbHopDiffBuilderIsolatesXmlErrors()
+{
+    await using var scope = TestScope.Create();
+    var sourceRoot = Path.Combine(scope.Root, "source");
+    var targetRoot = Path.Combine(scope.Root, "target");
+    Directory.CreateDirectory(sourceRoot);
+    Directory.CreateDirectory(targetRoot);
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, "good.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(targetRoot, "good.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, "broken.xml"), "<AML><Item>");
+    await File.WriteAllTextAsync(Path.Combine(targetRoot, "broken.xml"), "<AML />");
+    var result = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(
+        Guid.NewGuid(), "12SP9", "12SP18", sourceRoot, targetRoot, Path.Combine(scope.Root, "output"),
+        ResolvedRule1(Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 1), "12SP9", "12SP18"), DateTimeOffset.UtcNow));
+
+    Assert.Equal(OotbHopDiffBuildStatus.Blocked, result.Status);
+    Assert.Equal(1, result.Errors.Count);
+    Assert.Equal("broken.xml", result.Errors[0].RelativePath);
+    Assert.Equal(1, result.Summary.XmlFilesProcessed);
+    Assert.True(File.Exists(Path.Combine(result.SourceDiffRoot, "good.xml")));
+    Assert.False(File.Exists(Path.Combine(result.SourceDiffRoot, "broken.xml")));
+    Assert.False(File.Exists(Path.Combine(result.TargetDiffRoot, "broken.xml")));
+}
+
+static async Task OotbHopDiffArtifactPackagesAndVerifies()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archive = Path.Combine(scope.Root, "artifacts", "12SP9-to-12SP18.zip");
+
+    var artifact = await OotbHopDiffPackager.PackageAsync(
+        build, archive, DateTimeOffset.Parse("2026-08-03T03:00:00Z"));
+
+    Assert.Equal(OotbHopDiffArtifactState.Completed, artifact.State);
+    Assert.True(File.Exists(archive));
+    Assert.Equal(64, artifact.ArchiveChecksum!.Length);
+    using (var zip = System.IO.Compression.ZipFile.OpenRead(archive))
+    {
+        Assert.True(zip.Entries.Any(entry => entry.FullName == "SourceDiff/paired.xml"));
+        Assert.True(zip.Entries.Any(entry => entry.FullName == "TargetDiff/paired.xml"));
+        Assert.True(zip.Entries.Any(entry => entry.FullName == "completion-manifest.json"));
+        Assert.True(zip.Entries.Any(entry => entry.FullName == "processing-summary.json"));
+    }
+    var verification = await OotbHopDiffArtifactVerifier.VerifyAsync(archive, new OotbHopDiffReuseRequirement(
+        build.SourceVersion, build.TargetVersion, build.RuleSets, build.EffectiveRuleChecksum, artifact.ArchiveChecksum));
+    Assert.True(verification.IsReusable, string.Join("; ", verification.Issues));
+}
+
+static async Task BlockedOotbHopDiffCannotBePackaged()
+{
+    await using var scope = TestScope.Create();
+    var source = Path.Combine(scope.Root, "blocked-source");
+    var target = Path.Combine(scope.Root, "blocked-target");
+    Directory.CreateDirectory(source);
+    Directory.CreateDirectory(target);
+    await File.WriteAllTextAsync(Path.Combine(source, "manual.xml"), "<AML><Item type=\"Part\" id=\"A\" /></AML>");
+    await File.WriteAllTextAsync(Path.Combine(target, "manual.xml"), "<AML><Item type=\"Part\" id=\"A\" /></AML>");
+    var build = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(
+        Guid.NewGuid(), "12SP9", "12SP18", source, target, Path.Combine(scope.Root, "blocked-output"),
+        ResolvedRule1(Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 1), "12SP9", "12SP18"), DateTimeOffset.UtcNow));
+    var archive = Path.Combine(scope.Root, "blocked.zip");
+
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archive, DateTimeOffset.UtcNow);
+
+    Assert.Equal(OotbHopDiffArtifactState.Incomplete, artifact.State);
+    Assert.True(File.Exists(artifact.ProcessingSummaryPath));
+    Assert.False(File.Exists(archive));
+    Assert.True(artifact.Manifest is null);
+    Assert.True(artifact.ArchiveChecksum is null);
+}
+
+static async Task OotbHopDiffVerifierRequiresBothSides()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "artifact.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    using (var archive = System.IO.Compression.ZipFile.Open(archivePath, System.IO.Compression.ZipArchiveMode.Update))
+    {
+        foreach (var entry in archive.Entries.Where(entry => entry.FullName.StartsWith("TargetDiff/", StringComparison.Ordinal)).ToArray())
+            entry.Delete();
+    }
+    var tamperedChecksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(archivePath)));
+
+    var verification = await OotbHopDiffArtifactVerifier.VerifyAsync(archivePath, new OotbHopDiffReuseRequirement(
+        build.SourceVersion, build.TargetVersion, build.RuleSets, build.EffectiveRuleChecksum, tamperedChecksum));
+
+    Assert.False(verification.IsReusable);
+    Assert.True(verification.Issues.Any(issue => issue.Contains("SourceDiff", StringComparison.Ordinal) || issue.Contains("TargetDiff", StringComparison.Ordinal)));
+}
+
+static Task OotbHopDiffSkillReferencesTestedCore()
+{
+    var skillRoot = ProjectPath(".agents", "skills", "aras-prepare-ootb-hop-diff");
+    var skill = File.ReadAllText(Path.Combine(skillRoot, "SKILL.md"));
+    var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
+    AssertSkillFrontmatter(skill, "aras-prepare-ootb-hop-diff");
+    AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-prepare-ootb-hop-diff");
+    foreach (var typeName in new[] { "Rule1DiffEngine", "OotbHopDiffBuilder", "OotbHopDiffPackager", "OotbHopDiffArtifactVerifier" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"OOTB 跳點差異核心能力對照缺少 {typeName}。 ");
+    Assert.True(skill.Contains("不得修改來源或目標 OOTB", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不得手工建立或改寫完成標記", StringComparison.Ordinal));
+    Assert.True(skill.Contains("Rule 2", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static async Task OotbHopDiffPinsResolvedRuleSnapshot()
+{
+    await using var scope = TestScope.Create();
+    var source = Path.Combine(scope.Root, "pin-source");
+    var target = Path.Combine(scope.Root, "pin-target");
+    Directory.CreateDirectory(source);
+    Directory.CreateDirectory(target);
+    await File.WriteAllTextAsync(Path.Combine(source, "same.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(target, "same.xml"), "<AML />");
+    var commonDraft = DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow);
+    var common = Published(commonDraft, 3);
+    var exception = Published(new RuleSetDraft(
+        Guid.NewGuid(), Guid.NewGuid(), "12SP9 to 12SP18 exception", RuleSetKind.Rule1, RuleSetScope.VersionException,
+        "12SP9", "12SP18", commonDraft.Steps, DateTimeOffset.UtcNow, "operator"), 1);
+    var resolution = RuleSetResolver.Resolve([common, exception], RuleSetKind.Rule1, "12SP9", "12SP18");
+
+    var build = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(
+        Guid.NewGuid(), "12SP9", "12SP18", source, target, Path.Combine(scope.Root, "pin-output"), resolution, DateTimeOffset.UtcNow));
+
+    Assert.Equal(2, build.RuleSets.Count);
+    Assert.Equal(resolution.EffectiveChecksum, build.EffectiveRuleChecksum);
+    Assert.SequenceEqual(new[] { 3, 1 }, build.RuleSets.Select(rule => rule.Version));
+}
+
+static async Task OotbHopDiffVerifierRequiresSummary()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "without-summary.zip");
+    await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    using (var archive = System.IO.Compression.ZipFile.Open(archivePath, System.IO.Compression.ZipArchiveMode.Update))
+        archive.GetEntry("processing-summary.json")!.Delete();
+    var checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(archivePath)));
+
+    var verification = await OotbHopDiffArtifactVerifier.VerifyAsync(archivePath, new OotbHopDiffReuseRequirement(
+        build.SourceVersion, build.TargetVersion, build.RuleSets, build.EffectiveRuleChecksum, checksum));
+
+    Assert.False(verification.IsReusable);
+    Assert.True(verification.Issues.Any(issue => issue.Contains("processing-summary", StringComparison.Ordinal)));
+}
+
+static async Task OotbHopDiffVerifierRejectsUnsafeEntries()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "unsafe-entry.zip");
+    await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    using (var archive = System.IO.Compression.ZipFile.Open(archivePath, System.IO.Compression.ZipArchiveMode.Update))
+    {
+        var entry = archive.CreateEntry("../escape.xml");
+        await using var writer = new StreamWriter(entry.Open());
+        await writer.WriteAsync("<AML />");
+    }
+    var checksum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(archivePath)));
+
+    var verification = await OotbHopDiffArtifactVerifier.VerifyAsync(archivePath, new OotbHopDiffReuseRequirement(
+        build.SourceVersion, build.TargetVersion, build.RuleSets, build.EffectiveRuleChecksum, checksum));
+
+    Assert.False(verification.IsReusable);
+    Assert.True(verification.Issues.Any(issue => issue.Contains("安全相對路徑", StringComparison.Ordinal)));
+}
+
+static async Task<OotbHopDiffBuildResult> CreateReadyHopDiffAsync(string root)
+{
+    var source = Path.Combine(root, "ready-source");
+    var target = Path.Combine(root, "ready-target");
+    Directory.CreateDirectory(source);
+    Directory.CreateDirectory(target);
+    await File.WriteAllTextAsync(Path.Combine(source, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(target, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name></Item></AML>");
+    return await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(
+        Guid.NewGuid(), "12SP9", "12SP18", source, target, Path.Combine(root, "ready-output"),
+        ResolvedRule1(Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 4), "12SP9", "12SP18"),
+        DateTimeOffset.Parse("2026-08-03T02:00:00Z")),
+        () => DateTimeOffset.Parse("2026-08-03T02:30:00Z"));
+}
+
+static RuleSetResolutionResult ResolvedRule1(PublishedRuleSet rule, string sourceVersion, string targetVersion) =>
+    RuleSetResolver.Resolve([rule], RuleSetKind.Rule1, sourceVersion, targetVersion);
+
+static Task Rule2AppliesSevenScalarSteps()
+{
+    var source = AmlDocument.Parse("""
+        <AML><Item type="Part" id="A" action="edit" keyed_name="Customer"><sort_order>1</sort_order><stored_length>20</stored_length><label>Customer</label><description>Customer text</description></Item></AML>
+        """);
+    var target = AmlDocument.Parse("""
+        <AML><Item type="Part" id="A" action="edit" keyed_name="OOTB"><sort_order>2</sort_order><stored_length>10</stored_length><label>OOTB</label><description>OOTB text</description></Item></AML>
+        """);
+    var result = Rule2AdaptationEngine.Apply(source, target, ResolvedRule2(), @"OOTB_R38\PLM\Import\part.xml");
+
+    var targetItem = result.TargetWorkCopy.TopLevelItems.Single();
+    Assert.Equal("OOTB", targetItem.Attributes.Single(attribute => attribute.Key.LocalName == "keyed_name").Value);
+    Assert.False(targetItem.Children.Any(child => child.Name == "sort_order"));
+    Assert.Equal("20", targetItem.Children.Single(child => child.Name == "stored_length").ScalarValue);
+    Assert.Equal("Customer", targetItem.Children.Single(child => child.Name == "label").ScalarValue);
+    Assert.Equal("Customer text", targetItem.Children.Single(child => child.Name == "description").ScalarValue);
+    Assert.Equal(Rule2AdaptationStatus.Ready, result.Status);
+    return Task.CompletedTask;
+}
+
+static Task Rule2RecursesAndCopiesFederatedProperty()
+{
+    var source = AmlDocument.Parse("""
+        <AML><Item type="ItemType" id="IT" action="edit"><Relationships><Item type="Property" id="P1" action="add"><name>remote_code</name><data_type>federated</data_type></Item></Relationships></Item></AML>
+        """);
+    var target = AmlDocument.Parse("""
+        <AML><Item type="ItemType" id="IT" action="edit"><Relationships /></Item></AML>
+        """);
+    var result = Rule2AdaptationEngine.Apply(source, target, ResolvedRule2(), "Import/itemtype.xml");
+
+    Assert.False(result.SourceWorkCopy.Root.DescendantsAndSelf().Any(node => node.ItemId == "P1"));
+    var copied = result.TargetWorkCopy.Root.DescendantsAndSelf().Single(node => node.ItemId == "P1");
+    Assert.Equal("text", copied.Children.Single(child => child.Name == "data_type").ScalarValue);
+    Assert.Equal("1", copied.Children.Single(child => child.Name == "is_federated").ScalarValue);
+    Assert.Equal("1", copied.Children.Single(child => child.Name == "is_discoverable").ScalarValue);
+    Assert.Equal(1, result.Summary.FederatedPropertiesCopied);
+    return Task.CompletedTask;
+}
+
+static Task Rule2AmbiguousScalarRequiresManualReview()
+{
+    var source = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>one</label><label>two</label><description>source</description></Item></AML>");
+    var target = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>target</label><description>target</description></Item></AML>");
+    var result = Rule2AdaptationEngine.Apply(source, target, ResolvedRule2(), "part.xml");
+
+    Assert.Equal(Rule2AdaptationStatus.Blocked, result.Status);
+    Assert.True(result.ManualReviews.Any(review => review.Code == "AmbiguousScalarProperty"));
+    Assert.Equal("source", result.TargetWorkCopy.TopLevelItems.Single().Children.Single(child => child.Name == "description").ScalarValue);
+    return Task.CompletedTask;
+}
+
+static RuleSetResolutionResult ResolvedRule2()
+{
+    var rule = Published(DefaultUpgradeRuleSets.CreateRule2Draft("operator", DateTimeOffset.UtcNow), 1);
+    return RuleSetResolver.Resolve([rule], RuleSetKind.Rule2, "12SP9", "12SP18");
+}
+
+static async Task AdaptedPackagePreparesAfterVerificationAndBackup()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    var baseline = Path.Combine(scope.Root, "baseline");
+    var solutions = Path.Combine(scope.Root, "Support", "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>customer</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(baseline, "source.bin"), "source-binary");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "old.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "keep.bin"), "target-binary");
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18", baseline, solutions,
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
+        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
+            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+
+    var result = await AdaptedPackageBuilder.BuildAsync(request);
+
+    Assert.Equal(AdaptedPackageStatus.ReadyForFinalization, result.Status);
+    Assert.True(Directory.Exists(result.SolutionsBackupRoot));
+    Assert.True(File.Exists(Path.Combine(result.SolutionsBackupRoot, "old.xml")));
+    Assert.False(File.Exists(Path.Combine(solutions, "old.xml")));
+    Assert.Equal("target-binary", await File.ReadAllTextAsync(Path.Combine(solutions, "keep.bin")));
+    Assert.False(File.Exists(Path.Combine(result.SourceWorkRoot, "source.bin")));
+    Assert.True(File.Exists(Path.Combine(result.SourceWorkRoot, "paired.xml")));
+    Assert.True(File.Exists(Path.Combine(solutions, "paired.xml")));
+    var completion = await AdaptedPackageFinalizer.FinalizeAsync(result, Path.Combine(scope.Root, "completed"), DateTimeOffset.UtcNow);
+    Assert.Equal(AdaptedPackageStatus.Completed, completion.Status);
+    Assert.True(File.Exists(completion.CompletionManifestPath));
+}
+
+static async Task AdaptedPackageBackupFailurePreservesSolutions()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    var baseline = Path.Combine(scope.Root, "baseline");
+    var solutions = Path.Combine(scope.Root, "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"), "<AML />");
+    var originalPath = Path.Combine(solutions, "original.xml");
+    await File.WriteAllTextAsync(originalPath, "<AML />");
+    var invalidBackupRoot = Path.Combine(scope.Root, "backup-file");
+    await File.WriteAllTextAsync(invalidBackupRoot, "not-a-directory");
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18", baseline, solutions,
+        invalidBackupRoot, Path.Combine(scope.Root, "attempt"), archivePath,
+        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
+            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+
+    await Assert.ThrowsAsync<IOException>(() => AdaptedPackageBuilder.BuildAsync(request));
+    Assert.True(File.Exists(originalPath));
+    Assert.False(Directory.Exists(request.AttemptRoot));
+}
+
+static Task AdaptedPackageSkillReferencesTestedCore()
+{
+    var skillRoot = ProjectPath(".agents", "skills", "aras-prepare-adapted-package");
+    var skill = File.ReadAllText(Path.Combine(skillRoot, "SKILL.md"));
+    var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
+    AssertSkillFrontmatter(skill, "aras-prepare-adapted-package");
+    AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-prepare-adapted-package");
+    foreach (var typeName in new[] { "Rule2AdaptationEngine", "AdaptedPackageBuilder", "AdaptedPackageFinalizer", "OotbHopDiffArtifactVerifier" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"正式適配 Package 核心能力對照缺少 {typeName}。 ");
+    Assert.True(skill.Contains("備份失敗時不得寫入工作副本", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不得把 Item Property 當 Scalar", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不連接正式 DB", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static async Task PackageIntegrationRejectsHopIdentityMismatch()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    var baseline = Path.Combine(scope.Root, "baseline");
+    var solutions = Path.Combine(scope.Root, "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>customer</name></Item></AML>");
+    var original = Path.Combine(solutions, "original.xml");
+    await File.WriteAllTextAsync(original, "<AML />");
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), "11SP5", "R38", baseline, solutions,
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
+        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
+            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => AdaptedPackageBuilder.BuildAsync(request));
+    Assert.True(File.Exists(original));
+    Assert.False(Directory.Exists(request.BackupRoot));
+    Assert.False(Directory.Exists(request.AttemptRoot));
+}
+
+static async Task PackageIntegrationCompletesEndToEnd()
+{
+    await using var scope = TestScope.Create();
+    var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
+    var flowAttemptId = Guid.NewGuid();
+    var flow = new CustomerPackageOneTimeFlow(Guid.NewGuid(), history);
+    await flow.LockAsync(TestPackageLockRequest(flowAttemptId, Path.Combine(scope.Root, "rehearsal-db")), "operator");
+    var flowResult = await flow.CompleteAsync(flowAttemptId, "baseline-evidence", [], "operator");
+    Assert.Equal(CustomerPackageFlowState.Completed, flowResult.State);
+
+    var ootbSource = Path.Combine(scope.Root, "ootb-source");
+    var ootbTarget = Path.Combine(scope.Root, "ootb-target");
+    Directory.CreateDirectory(ootbSource);
+    Directory.CreateDirectory(ootbTarget);
+    const string sourceOotb = "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name><label>Old</label></Item></AML>";
+    const string targetOotb = "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name><label>New</label></Item></AML>";
+    await File.WriteAllTextAsync(Path.Combine(ootbSource, "nested.xml"), sourceOotb);
+    await File.WriteAllTextAsync(Path.Combine(ootbTarget, "nested.xml"), targetOotb);
+    var rule1 = Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 3);
+    var rule1Resolution = ResolvedRule1(rule1, "12SP9", "12SP18");
+    var diff = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(Guid.NewGuid(), "12SP9", "12SP18",
+        ootbSource, ootbTarget, Path.Combine(scope.Root, "rule1-output"), rule1Resolution, DateTimeOffset.UtcNow));
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(diff, archivePath, DateTimeOffset.UtcNow);
+
+    var baseline = Path.Combine(scope.Root, "customer-baseline");
+    var solutions = Path.Combine(scope.Root, "Support", "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    const string customerXml = "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name><label>Customer</label></Item></AML>";
+    await File.WriteAllTextAsync(Path.Combine(baseline, "nested.xml"), customerXml);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "customer.bin"), "customer-binary");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "original.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "upgrade.bin"), "upgrade-binary");
+    var rule2 = ResolvedRule2();
+    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18",
+        baseline, solutions, Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "rule2-attempt"), archivePath,
+        new OotbHopDiffReuseRequirement("12SP9", "12SP18", diff.RuleSets, diff.EffectiveRuleChecksum,
+            artifact.ArchiveChecksum!), rule2, DateTimeOffset.UtcNow));
+    var completed = await AdaptedPackageFinalizer.FinalizeAsync(adapted, Path.Combine(scope.Root, "completion"), DateTimeOffset.UtcNow);
+
+    Assert.Equal(AdaptedPackageStatus.Completed, completed.Status);
+    Assert.Equal(customerXml, await File.ReadAllTextAsync(Path.Combine(baseline, "nested.xml")));
+    Assert.Equal(sourceOotb, await File.ReadAllTextAsync(Path.Combine(ootbSource, "nested.xml")));
+    Assert.Equal(targetOotb, await File.ReadAllTextAsync(Path.Combine(ootbTarget, "nested.xml")));
+    Assert.Equal("upgrade-binary", await File.ReadAllTextAsync(Path.Combine(solutions, "upgrade.bin")));
+    Assert.False(File.Exists(Path.Combine(completed.SourceWorkRoot, "customer.bin")));
+    Assert.SequenceEqual(rule2.PinnedVersions, completed.Rule2RuleSets);
+    Assert.Equal(rule2.EffectiveChecksum, completed.Rule2EffectiveChecksum);
+    Assert.True(File.Exists(completed.CompletionManifestPath));
+}
+
+static async Task PackageIntegrationRejectsTamperedArtifactBeforeWrite()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    await File.AppendAllTextAsync(archivePath, "tampered");
+    var baseline = Path.Combine(scope.Root, "baseline");
+    var solutions = Path.Combine(scope.Root, "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"), "<AML />");
+    var original = Path.Combine(solutions, "original.xml");
+    await File.WriteAllTextAsync(original, "<AML />");
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), build.SourceVersion, build.TargetVersion, baseline, solutions,
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
+        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
+            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => AdaptedPackageBuilder.BuildAsync(request));
+    Assert.Equal("<AML />", await File.ReadAllTextAsync(original));
+    Assert.False(Directory.Exists(request.BackupRoot));
+    Assert.False(Directory.Exists(request.AttemptRoot));
+}
+
+static async Task PackageIntegrationBlocksFinalizationForManualReview()
+{
+    await using var scope = TestScope.Create();
+    var build = await CreateReadyHopDiffAsync(scope.Root);
+    var archivePath = Path.Combine(scope.Root, "rule1.zip");
+    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
+    var baseline = Path.Combine(scope.Root, "baseline");
+    var solutions = Path.Combine(scope.Root, "Solutions");
+    Directory.CreateDirectory(baseline);
+    Directory.CreateDirectory(solutions);
+    await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>one</label><label>two</label><description>customer</description></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "original.xml"), "<AML />");
+    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), build.SourceVersion,
+        build.TargetVersion, baseline, solutions, Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"),
+        archivePath, new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
+            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow));
+    var completionRoot = Path.Combine(scope.Root, "completion");
+
+    Assert.Equal(AdaptedPackageStatus.Blocked, adapted.Status);
+    Assert.True(adapted.ManualReviews.Any(review => review.Code == "AmbiguousScalarProperty"));
+    await Assert.ThrowsAsync<InvalidOperationException>(() => AdaptedPackageFinalizer.FinalizeAsync(adapted, completionRoot, DateTimeOffset.UtcNow));
+    Assert.False(Directory.Exists(completionRoot));
 }
 
 static CustomerPackageLockRequest TestPackageLockRequest(Guid flowAttemptId, string target) => new(
