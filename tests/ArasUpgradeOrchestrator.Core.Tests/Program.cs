@@ -1,3 +1,4 @@
+using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.Execution;
 using ArasUpgradeOrchestrator.Core.Packages;
@@ -27,6 +28,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("未處置 Export 排除項目阻擋 Package 基準完成", CustomerPackageExclusionsBlockCompletion)
     ,("Package 外部動作必須通過流程鎖與固定 Checksum", CustomerPackageActionRequiresLockAndChecksum)
     ,("客戶 Package 功能 Skill 引用正式受測核心", CustomerPackageSkillReferencesTestedCore)
+    ,("AML 公開模型分類六種節點並遞迴所有巢狀層級", AmlClassifiesAndTraversesNestedNodes)
+    ,("Package CompareKey 依 id 或 canonicalized where 建立", PackageCompareKeyUsesSpecifiedIdentity)
+    ,("Package CompareKey 缺失或同側重複時轉人工確認", PackageCompareKeyAmbiguityRequiresManualReview)
+    ,("AML 安全解析拒絕 DTD 並保留宣告 Namespace 與 CDATA", AmlParsingIsSafeAndPreservesSubtree)
+    ,("Package XML 僅依根目錄相對路徑配對", PackageXmlPairsByRelativePathOnly)
+    ,("AML 語意相等忽略格式 Attribute 與 Relationship 順序", AmlSemanticEqualityIgnoresPureFormatting)
+    ,("AML 語意比較將重複 Scalar Property 轉人工確認", AmlSemanticEqualityBlocksAmbiguousScalarProperties)
 };
 
 var failures = new List<string>();
@@ -430,6 +438,142 @@ static Task CustomerPackageSkillReferencesTestedCore()
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"客戶 Package 核心能力對照缺少 {typeName}。 ");
     Assert.True(skill.Contains("不得產生、修改或自由組合 SQL", StringComparison.Ordinal));
     Assert.True(skill.Contains("不得手工改寫", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static Task AmlClassifiesAndTraversesNestedNodes()
+{
+    var document = AmlDocument.Load(ProjectPath("tests", "fixtures", "aml", "nested_relationships.xml"));
+    var nodes = document.Root.DescendantsAndSelf().ToArray();
+
+    Assert.Equal(AmlNodeKind.AmlRoot, document.Root.Kind);
+    Assert.Equal(2, document.TopLevelItems.Count);
+    Assert.True(nodes.Any(node => node.Kind == AmlNodeKind.ScalarProperty && node.Name == "label"));
+    Assert.True(nodes.Any(node => node.Kind == AmlNodeKind.ItemProperty && node.Name == "data_source"));
+    Assert.True(nodes.Any(node => node.Kind == AmlNodeKind.RelationshipsContainer));
+    Assert.Equal(2, nodes.Count(node => node.Kind == AmlNodeKind.RelationshipItem));
+    var deepest = nodes.Single(node => node.Kind == AmlNodeKind.Item && node.Path.EndsWith("Item[type=ItemType, name=List]", StringComparison.Ordinal));
+    Assert.True(deepest.Depth >= 5, "AML 遞迴不得限制為兩層或三層。 ");
+    Assert.Equal(
+        "/AML/Item[type=ItemType, id=ROOT]/Relationships/Item[type=Property, name=created_by_id]/ItemProperty[name=data_source]/Item[type=ItemType, name=List]/Relationships/Item[type=Value, name=A]",
+        deepest.Children.Single(node => node.Kind == AmlNodeKind.RelationshipsContainer).Children.Single().Path);
+    return Task.CompletedTask;
+}
+
+static Task PackageCompareKeyUsesSpecifiedIdentity()
+{
+    var document = AmlDocument.Parse("""
+        <AML>
+          <Item type=" Part " id=" abc " where="[Part].[name] = 'ignored'" action=" edit " />
+          <Item type="Part" where="  [Part].[name]   =   'A  B'  " action="get" />
+        </AML>
+        """);
+
+    var byId = PackageCompareKey.Create(document.TopLevelItems[0]);
+    var byWhere = PackageCompareKey.Create(document.TopLevelItems[1]);
+    Assert.Equal(CompareKeyStatus.Success, byId.Status);
+    Assert.Equal("PART|ABC|EDIT", byId.Key);
+    Assert.Equal("PART|[Part].[name] = 'A  B'|GET", byWhere.Key);
+    return Task.CompletedTask;
+}
+
+static Task PackageCompareKeyAmbiguityRequiresManualReview()
+{
+    var document = AmlDocument.Parse("""
+        <AML>
+          <Item type="Part" id="A" />
+          <Item type="Part" id="DUP" action="edit" />
+          <Item type="part" id="dup" action="EDIT" />
+        </AML>
+        """);
+
+    var missingAction = PackageCompareKey.Create(document.TopLevelItems[0]);
+    Assert.Equal(CompareKeyStatus.ManualReview, missingAction.Status);
+    Assert.Equal(CompareKeyIssue.MissingAction, missingAction.Issue);
+    Assert.Equal("/AML/Item[type=Part, id=A]", missingAction.AmlPath);
+
+    var index = PackageCompareKeyIndex.Build(document.TopLevelItems);
+    Assert.Equal(0, index.UniqueItems.Count);
+    Assert.Equal(3, index.ManualReviews.Count);
+    Assert.Equal(2, index.ManualReviews.Count(review => review.Issue == CompareKeyIssue.DuplicateOnSameSide));
+    var invalidWhere = PackageCompareKey.Create(AmlDocument.Parse(
+        "<AML><Item type=\"Part\" where=\"[Part].[name]='A\" action=\"get\" /></AML>").TopLevelItems.Single());
+    Assert.Equal(CompareKeyIssue.InvalidWhere, invalidWhere.Issue);
+    return Task.CompletedTask;
+}
+
+static Task AmlParsingIsSafeAndPreservesSubtree()
+{
+    var document = AmlDocument.Load(ProjectPath("tests", "fixtures", "aml", "nested_relationships.xml"));
+    var xml = document.ToXml();
+    Assert.True(xml.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\"?>", StringComparison.Ordinal));
+    Assert.True(xml.Contains("xml:lang=\"en\"", StringComparison.Ordinal));
+    Assert.True(xml.Contains("<![CDATA[Document]]>", StringComparison.Ordinal));
+    Assert.True(document.TopLevelItems[0].CloneSubtree().Descendants().Any(element => element.Name.LocalName == "Relationships"));
+    Assert.Throws<AmlParseException>(() => AmlDocument.Parse("<!DOCTYPE AML [<!ENTITY x SYSTEM 'file:///secret'>]><AML>&x;</AML>"));
+    return Task.CompletedTask;
+}
+
+static async Task PackageXmlPairsByRelativePathOnly()
+{
+    await using var scope = TestScope.Create();
+    var source = Path.Combine(scope.Root, "source");
+    var target = Path.Combine(scope.Root, "target");
+    Directory.CreateDirectory(Path.Combine(source, "nested"));
+    Directory.CreateDirectory(Path.Combine(target, "other"));
+    await File.WriteAllTextAsync(Path.Combine(source, "same.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(target, "SAME.XML"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(source, "nested", "module.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(target, "other", "module.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(source, "ignored.txt"), "not xml");
+
+    var pairs = PackageXmlPathMatcher.Match(source, target);
+    Assert.Equal(3, pairs.Count);
+    Assert.True(pairs.Any(pair => pair.RelativePath == "same.xml" && pair.SourcePath is not null && pair.TargetPath is not null));
+    Assert.True(pairs.Any(pair => pair.RelativePath == "nested/module.xml" && pair.SourcePath is not null && pair.TargetPath is null));
+    Assert.True(pairs.Any(pair => pair.RelativePath == "other/module.xml" && pair.SourcePath is null && pair.TargetPath is not null));
+    Assert.False(pairs.Any(pair => pair.RelativePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)));
+}
+
+static Task AmlSemanticEqualityIgnoresPureFormatting()
+{
+    var left = AmlDocument.Parse("""
+        <AML xmlns:x="urn:test"><Item type="Part" id="A" action="edit" x:flag="1">
+          <label condition="eq">Name</label>
+          <Relationships>
+            <Item type="Rel" id="R1" action="add"><name>One</name></Item>
+            <Item type="Rel" id="R2" action="add"><name>Two</name></Item>
+          </Relationships>
+        </Item></AML>
+        """);
+    var right = AmlDocument.Parse("""
+        <AML xmlns:y="urn:test">
+          <Item action="edit" id="A" y:flag="1" type="Part">
+            <Relationships>
+              <Item action="add" id="R2" type="Rel"><name>Two</name></Item>
+              <Item id="R1" type="Rel" action="add"><name>One</name></Item>
+            </Relationships>
+            <label condition="eq">Name</label>
+          </Item>
+        </AML>
+        """);
+
+    var equal = AmlSemanticComparer.Compare(left, right);
+    Assert.Equal(AmlComparisonStatus.Equal, equal.Status);
+    var changed = AmlSemanticComparer.Compare(left, AmlDocument.Parse(right.ToXml().Replace(">Name<", ">Changed<", StringComparison.Ordinal)));
+    Assert.Equal(AmlComparisonStatus.Different, changed.Status);
+    return Task.CompletedTask;
+}
+
+static Task AmlSemanticEqualityBlocksAmbiguousScalarProperties()
+{
+    var left = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>A</label><label>B</label></Item></AML>");
+    var right = AmlDocument.Parse("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>A</label></Item></AML>");
+
+    var result = AmlSemanticComparer.Compare(left, right);
+    Assert.Equal(AmlComparisonStatus.ManualReview, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == AmlComparisonIssueCode.DuplicateScalarProperty));
+    Assert.True(result.Issues.Any(issue => issue.LeftPath?.Contains("ScalarProperty[name=label]", StringComparison.Ordinal) == true));
     return Task.CompletedTask;
 }
 

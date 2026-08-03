@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AML>
+  <Item type="ItemType" id="ROOT" action="add">
+    <label xml:lang="en"><![CDATA[Document]]></label>
+    <Relationships>
+      <Item type="Property" action="add">
+        <name>created_by_id</name>
+        <data_source keyed_name="List" type="ItemType">
+          <Item type="ItemType" action="get">
+            <name>List</name>
+            <Relationships>
+              <Item type="Value" action="add">
+                <name>A</name>
+              </Item>
+            </Relationships>
+          </Item>
+        </data_source>
+      </Item>
+    </Relationships>
+  </Item>
+  <Item type="Form" id="SECOND" action="get">
+    <name>Second</name>
+  </Item>
+</AML>
