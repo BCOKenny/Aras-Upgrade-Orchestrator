@@ -5,6 +5,8 @@ description: Use when Codex 需要在目標版 Aras Core Tree 中解析舊版檔
 
 # 解析 Core Tree 邏輯檔案配對
 
+直接指令：**「使用 aras-resolve-core-tree-file-mappings 解析舊檔案至目標 Core Tree 的對應。」**
+
 直接指令：**「找出這個舊版檔案在目標 Core Tree 中的邏輯對應。」**
 
 此 Skill 只對一個已驗證的來源相對路徑解析目標版 OOTB 的邏輯檔案對應。它不比較內容、不掃描其他目錄、不判定 A／B／C，也不複製、改名或修改任何 Core Tree 檔案。

@@ -5,6 +5,8 @@ description: Use when Codex 需要依固定 Client／Server 規則判定兩個 A
 
 # 比較 Core Tree 檔案內容
 
+直接指令：**「使用 aras-compare-core-tree-content 比較兩個 Core Tree 檔案。」**
+
 直接指令：**「依 Core Tree 規則比較這兩個檔案是否相同。」**
 
 此 Skill 只比較一對已驗證檔案。它不掃描整棵樹、不解析邏輯檔案對應、不判定 A／B／C，也不複製、合併或修改 R38 Core Tree。
