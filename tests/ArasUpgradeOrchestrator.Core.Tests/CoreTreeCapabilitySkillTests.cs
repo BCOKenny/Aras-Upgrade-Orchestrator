@@ -55,6 +55,6 @@ internal static class CoreTreeCapabilitySkillTests
         var content = File.ReadAllText(path);
         Require(content.Contains("display_name: \"", StringComparison.Ordinal), "Agent metadata 缺少 display_name。");
         Require(content.Contains("short_description: \"", StringComparison.Ordinal), "Agent metadata 缺少 short_description。");
-        Require(content.Contains($"default_prompt: \"請使用 ${skillName}", StringComparison.Ordinal), "Agent metadata 缺少 Skill 預設提示。");
+        Require(content.Contains($"default_prompt: \"使用 ${skillName}", StringComparison.Ordinal), "Agent metadata 缺少 Skill 預設提示。");
     }
 }
