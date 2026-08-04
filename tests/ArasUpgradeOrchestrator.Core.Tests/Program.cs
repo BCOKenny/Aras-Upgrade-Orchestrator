@@ -82,6 +82,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 輸入驗證 Skill 具有完整契約與驗收案例", CoreTreeInputValidationSkillPackageIsComplete)
     ,("Core Tree 檔案內容比較 Skill 具有完整契約與驗收案例", CoreTreeContentComparisonSkillPackageIsComplete)
     ,("Core Tree 邏輯檔案配對 Skill 具有完整契約與驗收案例", CoreTreeFileMappingSkillPackageIsComplete)
+    ,("Core Tree 差異分類 Skill 具有完整契約與驗收案例", CoreTreeDifferenceClassificationSkillPackageIsComplete)
 };
 
 var failures = new List<string>();
@@ -1622,6 +1623,13 @@ static Task CoreTreeFileMappingSkillPackageIsComplete()
 {
     CoreTreeCapabilitySkillTests.AssertPackage("aras-resolve-core-tree-file-mappings",
         ["exact-name", "htm-to-html", "htm-to-cshtml", "html-to-cshtml", "js-to-ts", "js-to-tsx", "no-match", "ambiguous", "cross-directory-rejected"]);
+    return Task.CompletedTask;
+}
+
+static Task CoreTreeDifferenceClassificationSkillPackageIsComplete()
+{
+    CoreTreeCapabilitySkillTests.AssertPackage("aras-classify-core-tree-differences",
+        ["category-a", "category-b", "category-c", "unchanged", "a-target-collision", "ambiguous-target", "file-read-error"]);
     return Task.CompletedTask;
 }
 

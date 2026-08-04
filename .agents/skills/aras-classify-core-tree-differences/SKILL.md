@@ -5,8 +5,6 @@ description: Use when Codex 需要掃描三份已驗證的 Aras Core Tree、判�
 
 # 分類 Core Tree 差異
 
-直接指令：**「使用 aras-classify-core-tree-differences 產生 Core Tree A／B／C 分類。」**
-
 直接指令：**「只分類這三份 Core Tree，不建立交付目錄。」**
 
 此 Skill 只產生穩定排序的 A／B／C 分類、Notice、ManualReview、Error 與 `ReadyToComplete`／`Blocked`。它不建立 A／B／C 交付目錄、不改寫三份輸入、不合併或修改 R38，也不得標記 `Completed`。
