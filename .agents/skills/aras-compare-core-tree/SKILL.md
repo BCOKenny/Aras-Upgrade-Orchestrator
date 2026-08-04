@@ -39,6 +39,7 @@ description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、
 
 - 不合併或修改 R38 Core Tree，也不修改任何 Core Tree 輸入。
 - 不得手工建立或改寫 `Completed`、摘要、版本證據、規則 Checksum 或人工確認結果。
+- 多候選不得猜測；維持人工確認並停止後續正式交付。
 - 不建立分類 D；不覆寫舊嘗試；輸出不得與任何輸入重疊。
 - 目前缺少 UI／CLI 及案件 command/action 時，實際客戶案件停止在正式執行介面邊界，不手工模擬持久化。
 - 不連接 DB、不啟動 Aras 工具、不操作正式 `Support`、`Solutions` 或 `K:`。

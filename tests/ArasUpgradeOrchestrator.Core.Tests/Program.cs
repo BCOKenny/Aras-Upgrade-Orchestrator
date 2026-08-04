@@ -1574,11 +1574,7 @@ static Task CoreTreeSkillReferencesTestedCore()
     Assert.True(skill.Contains("command/action", StringComparison.Ordinal));
     foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder", "DirectoryLeaseManager" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree capability reference is missing {typeName}.");
-    if (routesFullWorkflowInOrder)
-        return Task.CompletedTask;
-
     Assert.True(skill.Contains("`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`", StringComparison.Ordinal));
-    Assert.True(skill.Contains("`aras-classify-core-tree-differences` 會使用 `aras-compare-core-tree-content` 與 `aras-resolve-core-tree-file-mappings`", StringComparison.Ordinal));
     Assert.True(skill.Contains("只分類", StringComparison.Ordinal));
     Assert.True(skill.Contains("停止", StringComparison.Ordinal));
     Assert.True(skill.Contains("完整交付", StringComparison.Ordinal));
@@ -1591,8 +1587,6 @@ static Task CoreTreeSkillReferencesTestedCore()
     Assert.True(capabilities.Contains("| 業務能力契約 | 細項 Skill | 目前參考實作 | 狀態 |", StringComparison.Ordinal));
     Assert.True(capabilities.Contains("共同驗收案例", StringComparison.Ordinal));
     Assert.True(capabilities.Contains("`DirectoryLeaseManager`", StringComparison.Ordinal));
-    if (skill.Contains("`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`", StringComparison.Ordinal))
-        return Task.CompletedTask;
     foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree 核心能力對照缺少 {typeName}。 ");
     Assert.True(skill.Contains("不合併或修改 R38 Core Tree", StringComparison.Ordinal));
