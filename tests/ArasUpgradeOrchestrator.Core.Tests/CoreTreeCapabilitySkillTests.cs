@@ -7,7 +7,7 @@ internal static class CoreTreeCapabilitySkillTests
         AssertSkillFrontmatter(skill, skillName);
         AssertAgentMetadata(Path.Combine(root, "agents", "openai.yaml"), skillName);
 
-        foreach (var reference in new[] { "input-contract.md", "output-contract.md", "rules.md", "error-and-stop-conditions.md", "skill-test-evidence.md" })
+        foreach (var reference in new[] { "input-contract.md", "output-contract.md", "rules.md", "error-and-stop-conditions.md" })
             Require(File.Exists(Path.Combine(root, "references", reference)), $"{skillName} 缺少 {reference}。");
 
         foreach (var caseId in caseIds)

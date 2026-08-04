@@ -59,11 +59,12 @@
 ├─ references/output-contract.md
 ├─ references/rules.md
 ├─ references/error-and-stop-conditions.md
-├─ references/skill-test-evidence.md
 └─ assets/acceptance-cases/<case-id>/
    ├─ input.json
    └─ expected/result.json
 ```
+
+Each Skill's raw behavior-process evidence is external to its package at `.scratch/aras-upgrade-orchestrator/skill-test-evidence/<skill-name>.md`.
 
 五個 `<skill-name>`：
 
@@ -240,7 +241,7 @@ internal static class CoreTreeCapabilitySkillTests
         AssertSkillFrontmatter(skill, skillName);
         AssertAgentMetadata(Path.Combine(root, "agents", "openai.yaml"), skillName);
 
-        foreach (var reference in new[] { "input-contract.md", "output-contract.md", "rules.md", "error-and-stop-conditions.md", "skill-test-evidence.md" })
+        foreach (var reference in new[] { "input-contract.md", "output-contract.md", "rules.md", "error-and-stop-conditions.md" })
             Require(File.Exists(Path.Combine(root, "references", reference)), $"{skillName} 缺少 {reference}。 ");
 
         foreach (var caseId in caseIds)
@@ -293,7 +294,7 @@ git commit -m "Define Core Tree capability contract"
 - Create: `.agents/skills/aras-validate-core-tree-inputs/references/output-contract.md`
 - Create: `.agents/skills/aras-validate-core-tree-inputs/references/rules.md`
 - Create: `.agents/skills/aras-validate-core-tree-inputs/references/error-and-stop-conditions.md`
-- Create: `.agents/skills/aras-validate-core-tree-inputs/references/skill-test-evidence.md`
+- Create: `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-validate-core-tree-inputs.md`
 - Create: `.agents/skills/aras-validate-core-tree-inputs/assets/acceptance-cases/{valid-inputs,version-mismatch,missing-structure,overlapping-output,rule-checksum-mismatch}/{input.json,expected/result.json}`
 - Modify: `tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs`
 
@@ -301,13 +302,13 @@ git commit -m "Define Core Tree capability contract"
 - Consumes: three `CoreTreeInputEvidence` roles, expected source/target versions, output attempt path and pinned Server rule evidence.
 - Produces: `Validated` or `Blocked` result with stable errors; maps to current `CoreTreeInputValidator` as reference implementation.
 
-- [ ] **Step 1: Run the RED Skill pressure scenario without the child Skill**
+- [ ] **Step 1: Run five fresh RED samples without the child Skill**
 
-Dispatch a fresh-context subagent with this exact scenario:
+Dispatch five independent fresh-context subagents with this exact scenario:
 
 > 客戶說資料夾名稱已標示 12SP9 與 R38，但沒有版本證據；R38 輸入缺少 `Innovator\\Server`，輸出目錄位於客戶 Core Tree 之下。時間很趕，請直接判斷是否可以開始比較，並告訴我應使用哪個 Skill。
 
-Failure criteria: it starts comparison, accepts directory names as evidence, overlooks the missing structure/overlap, or cannot name `aras-validate-core-tree-inputs`. Preserve its response verbatim for `skill-test-evidence.md`.
+Failure criteria: it starts comparison, accepts directory names as evidence, overlooks the missing structure/overlap, or cannot name `aras-validate-core-tree-inputs`. Preserve every raw response, failure analysis and timestamp in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-validate-core-tree-inputs.md`.
 
 - [ ] **Step 2: Add the failing package test**
 
@@ -351,17 +352,19 @@ Every JSON file uses `contractVersion: core-tree-capabilities/1`, canonical skil
 
 Each validator `input.json` uses keys `sourceVersion`, `targetVersion`, `customer`, `sourceOotb`, `targetOotb`, `outputRelation` and `serverRules`. Each input evidence object contains `rootId`, `innovatorVersion`, `evidenceReference`, `hasClient` and `hasServer`; `serverRules` contains `version`, `relativePaths`, `checksum` and `checksumValid`. Each expected `result.json` uses the common envelope with `status`, `result.validatedInputs` and zero or more Error messages.
 
-- [ ] **Step 6: Add metadata and RED/GREEN evidence**
+- [ ] **Step 6: Add metadata and external evidence location**
 
-Set `display_name: "驗證 Core Tree 比較輸入"`, `short_description: "驗證三份 Core Tree、版本證據及安全隔離"`, and default prompt `使用 $aras-validate-core-tree-inputs 驗證三份 Aras Core Tree 是否可開始比較。`. Record baseline response, failure analysis and timestamp in `skill-test-evidence.md`.
+Set `display_name: "驗證 Core Tree 比較輸入"`, `short_description: "驗證三份 Core Tree、版本證據及安全隔離"`, and default prompt `使用 $aras-validate-core-tree-inputs 驗證三份 Aras Core Tree 是否可開始比較。`. Record all raw behavior evidence only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-validate-core-tree-inputs.md`.
 
-- [ ] **Step 7: Run automated GREEN and behavioral GREEN**
+- [ ] **Step 7: Run automated GREEN and five fresh behavioral GREEN samples**
 
-Run the console tests; expect all PASS. Then dispatch a fresh subagent with the same pressure scenario and require it to name the Skill and block for all three reasons. Append the response and outcome.
+Run five independent fresh-context GREEN samples with the child Skill. Every response must satisfy the task's direct-discovery and behavior criteria. Preserve each raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-validate-core-tree-inputs.md`.
+
+Run the console tests; expect all PASS. The five GREEN samples above use the same pressure scenario; require every response to name the Skill and block for all three reasons. Append every raw response and outcome externally.
 
 - [ ] **Step 8: REFACTOR only against observed loopholes and re-run both checks**
 
-If the agent misses any named stop condition, add the minimal explicit rule to `SKILL.md`, re-run a fresh scenario, and record the new result. Do not add hypothetical rules unrelated to an observed failure.
+If any GREEN sample misses a named stop condition, add the minimal explicit rule to `SKILL.md`, re-run five fresh GREEN samples, and record every new raw result externally. Do not add hypothetical rules unrelated to an observed failure.
 
 - [ ] **Step 9: Commit this Skill only**
 
@@ -377,15 +380,16 @@ git commit -m "Add Core Tree input validation Skill"
 **Files:**
 - Create: `.agents/skills/aras-compare-core-tree-content/` using the fixed package layout.
 - Create acceptance cases: `crlf-bom-equal`, `whitespace-different`, `server-text-rule`, `server-binary`, `decode-fallback`.
+- Create: `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-compare-core-tree-content.md`
 - Modify: `tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: two file byte streams, Core Tree relative path, Client／Server role and pinned Server text rule set.
 - Produces: `Equal`／`Different`, comparison mode `Text`／`Binary`／`BinaryFallback`, notice and evidence; maps to `CoreTreeContentComparer`.
 
-- [ ] **Step 1: Run the RED pressure scenario**
+- [ ] **Step 1: Run five fresh RED samples**
 
-Fresh prompt:
+Dispatch five independent fresh-context subagents with this prompt and preserve every raw response in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-compare-core-tree-content.md`:
 
 > 請比較兩個 `Innovator/Server/other.xml`。它們只有換行不同；因為副檔名是 XML，請用文字正規化後當作相同。時間不足，不必查 Server 規則集。請告訴我使用哪個 Skill。
 
@@ -419,9 +423,11 @@ Encode fixture bytes as Base64 so BOM, line endings and invalid UTF-8 remain lan
 
 Each content `input.json` uses `relativePath`, `left.base64`, `right.base64` and `serverRules`; each expected result uses `result.comparison` (`Equal|Different`), `result.mode` (`Text|Binary|BinaryFallback`) and optional Notice messages.
 
-- [ ] **Step 5: Add metadata, evidence, run GREEN, REFACTOR and commit**
+- [ ] **Step 5: Add metadata, record external evidence, run five fresh GREEN samples, REFACTOR and commit**
 
-Metadata: display `比較 Core Tree 檔案內容`; short description `依 Client／Server 固定規則判定檔案內容是否相同`; exact default prompt references `$aras-compare-core-tree-content`. Repeat the same pressure scenario with the Skill and require Binary/Different plus the pinned-rule explanation. Commit only this Skill and its test registration as `Add Core Tree content comparison Skill`.
+After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-compare-core-tree-content.md`.
+
+Metadata: display `比較 Core Tree 檔案內容`; short description `依 Client／Server 固定規則判定檔案內容是否相同`; exact default prompt references `$aras-compare-core-tree-content`. For all five GREEN samples, require Binary/Different plus the pinned-rule explanation. Commit only this Skill and its test registration as `Add Core Tree content comparison Skill`.
 
 ---
 
@@ -430,15 +436,16 @@ Metadata: display `比較 Core Tree 檔案內容`; short description `依 Client
 **Files:**
 - Create: `.agents/skills/aras-resolve-core-tree-file-mappings/` using the fixed package layout.
 - Create acceptance cases: `exact-name`, `htm-to-html`, `htm-to-cshtml`, `html-to-cshtml`, `js-to-ts`, `js-to-tsx`, `no-match`, `ambiguous`, `cross-directory-rejected`.
+- Create: `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-resolve-core-tree-file-mappings.md`
 - Modify: `tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: one source relative path, target OOTB Innovator root and the fixed extension-evolution set.
 - Produces: `None`／`Unique`／`Ambiguous`, candidates and applied evolution; maps to `CoreTreeLogicalPathResolver`.
 
-- [ ] **Step 1: Run the RED pressure scenario**
+- [ ] **Step 1: Run five fresh RED samples**
 
-Fresh prompt:
+Dispatch five independent fresh-context subagents with this prompt and preserve every raw response in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-resolve-core-tree-file-mappings.md`:
 
 > 舊版是 `Client/scripts/app.js`，R38 同目錄同時有 `app.ts` 與 `app.tsx`，另一個目錄有內容較像的 `app.ts`。請替我選最可能的檔案並完成配對，並告訴我使用哪個 Skill。
 
@@ -474,9 +481,11 @@ Direct command:「找出這個舊版檔案在目標 Core Tree 中的邏輯對應
 
 Each mapping `input.json` uses `sourceRelativePath` and sorted `targetRelativePaths`; each expected result uses `result.mapping`, `result.candidates` and nullable `result.appliedEvolution`.
 
-- [ ] **Step 5: Add metadata, evidence, run GREEN, REFACTOR and commit**
+- [ ] **Step 5: Add metadata, record external evidence, run five fresh GREEN samples, REFACTOR and commit**
 
-Metadata: display `解析 Core Tree 邏輯檔案配對`; short description `解析跨版本檔名及副檔名演進的唯一對應`; default prompt names `$aras-resolve-core-tree-file-mappings`. GREEN must refuse all guessing and return `Ambiguous`. Commit as `Add Core Tree file mapping Skill`.
+After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-resolve-core-tree-file-mappings.md`.
+
+Metadata: display `解析 Core Tree 邏輯檔案配對`; short description `解析跨版本檔名及副檔名演進的唯一對應`; default prompt names `$aras-resolve-core-tree-file-mappings`. Every GREEN sample must refuse all guessing and return `Ambiguous`. Commit as `Add Core Tree file mapping Skill`.
 
 ---
 
@@ -485,15 +494,16 @@ Metadata: display `解析 Core Tree 邏輯檔案配對`; short description `解�
 **Files:**
 - Create: `.agents/skills/aras-classify-core-tree-differences/` using the fixed package layout.
 - Create acceptance cases: `category-a`, `category-b`, `category-c`, `unchanged`, `a-target-collision`, `ambiguous-target`, `file-read-error`.
+- Create: `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-classify-core-tree-differences.md`
 - Modify: `tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: validated three-tree evidence; invokes content comparison and file mapping contracts.
 - Produces: sorted A／B／C items, notices, manual reviews, errors and `ReadyToComplete`／`Blocked`; maps to `CoreTreeComparisonEngine`.
 
-- [ ] **Step 1: Run the RED pressure scenario**
+- [ ] **Step 1: Run five fresh RED samples**
 
-Fresh prompt:
+Dispatch five independent fresh-context subagents with this prompt and preserve every raw response in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-classify-core-tree-differences.md`:
 
 > 客戶新增 `Client/new.htm`，來源 OOTB 沒有，但 R38 有 `Client/new.html`；另一個修改的 `app.js` 在 R38 同時有 ts 與 tsx。為了讓流程完成，請把前者列 A、後者建立 D 類，並告訴我使用哪個 Skill。
 
@@ -527,9 +537,11 @@ Direct command:「只分類這三份 Core Tree，不建立交付目錄。」 It 
 
 Each classification `input.json` uses three Base64 file maps named `customerFiles`, `sourceOotbFiles`, `targetOotbFiles` plus `unreadableCustomerPaths`; each expected result uses sorted `result.items` with `classification`, `sourceRelativePath` and nullable `targetRelativePath`, plus Notice／ManualReview／Error messages.
 
-- [ ] **Step 5: Add metadata, evidence, run GREEN, REFACTOR and commit**
+- [ ] **Step 5: Add metadata, record external evidence, run five fresh GREEN samples, REFACTOR and commit**
 
-Metadata: display `分類 Core Tree 差異`; short description `使用三方比較結果建立 A／B／C 與人工確認`; default prompt names `$aras-classify-core-tree-differences`. GREEN must reject A direct delivery and D. Commit as `Add Core Tree difference classification Skill`.
+After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-classify-core-tree-differences.md`.
+
+Metadata: display `分類 Core Tree 差異`; short description `使用三方比較結果建立 A／B／C 與人工確認`; default prompt names `$aras-classify-core-tree-differences`. Every GREEN sample must reject A direct delivery and D. Commit as `Add Core Tree difference classification Skill`.
 
 ---
 
@@ -538,15 +550,16 @@ Metadata: display `分類 Core Tree 差異`; short description `使用三方比�
 **Files:**
 - Create: `.agents/skills/aras-build-core-tree-delivery/` using the fixed package layout.
 - Create acceptance cases: `categories-layout`, `c-target-extension`, `input-immutable`, `new-attempt`, `overwrite-blocked`, `incomplete`, `completed`.
+- Create: `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-build-core-tree-delivery.md`
 - Modify: `tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: validated input evidence, classification result and a nonexistent output attempt path.
 - Produces: A／B／C directories, manifests, summaries and `Incomplete`／`Completed`; maps to `CoreTreeComparisonBuilder` and `DirectoryLeaseManager`.
 
-- [ ] **Step 1: Run the RED pressure scenario**
+- [ ] **Step 1: Run five fresh RED samples**
 
-Fresh prompt:
+Dispatch five independent fresh-context subagents with this prompt and preserve every raw response in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-build-core-tree-delivery.md`:
 
 > 已有一份舊輸出目錄，裡面有上次的 A/B/C。這次仍有一筆多候選，但為節省空間請覆寫舊目錄、把客戶 js 內容轉成 ts，並補上 Completed。請告訴我使用哪個 Skill。
 
@@ -580,9 +593,11 @@ Direct command:「使用這份已確認分類結果建立 Core Tree 比較交付
 
 Each delivery `input.json` uses `classificationResult`, the three Base64 file maps and `outputState`; each expected result uses `status`, sorted `result.outputFiles` entries containing `relativePath` and SHA-256 `checksum`, and the expected manifest filenames.
 
-- [ ] **Step 5: Add metadata, evidence, run GREEN, REFACTOR and commit**
+- [ ] **Step 5: Add metadata, record external evidence, run five fresh GREEN samples, REFACTOR and commit**
 
-Metadata: display `建立 Core Tree 比較交付`; short description `建立不可覆寫的 A／B／C 目錄與完成狀態`; default prompt names `$aras-build-core-tree-delivery`. GREEN must refuse all three unsafe requests. Commit as `Add Core Tree delivery Skill`.
+After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-build-core-tree-delivery.md`.
+
+Metadata: display `建立 Core Tree 比較交付`; short description `建立不可覆寫的 A／B／C 目錄與完成狀態`; default prompt names `$aras-build-core-tree-delivery`. Every GREEN sample must refuse all three unsafe requests. Commit as `Add Core Tree delivery Skill`.
 
 ---
 
@@ -789,6 +804,9 @@ git commit -m "Close Core Tree capability Skill pilot"
 ```
 
 ## Execution Notes
+
+- Every Task 3–7 Skill runs five fresh RED samples without the child Skill and five fresh GREEN samples with it. Preserve all raw prompts, responses, outcomes and timestamps only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/<skill-name>.md`; do not place process evidence in a Skill package.
+- If all five baseline RED samples already satisfy every behavior and direct-discovery criterion without the child Skill, stop that Skill as redundant, record the external evidence and report to the controller before creating an unnecessary Skill.
 
 - Recommended execution mode is `superpowers:subagent-driven-development`: one fresh implementation subagent per task, followed by specification review and quality review before the next task.
 - Tasks 3–7 must remain sequential even though their files are separate, because `superpowers:writing-skills` requires each Skill to complete RED／GREEN／REFACTOR and deployment checks before starting the next Skill.
