@@ -78,6 +78,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
+    ,("Core Tree 細項能力 Skill 具有穩定共用契約", CoreTreeCapabilityContractIsStable)
 };
 
 var failures = new List<string>();
@@ -1581,6 +1582,22 @@ static Task CoreTreeCapabilitySkillArchitectureIsRecorded()
         Assert.True(skillMap.Contains($"未來驗收 `{skillName}/assets/acceptance-cases/`", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 驗收路徑。 ");
         Assert.True(skillMap.Contains($"現有 C# 參考實作 `{referenceType}`，Skill 契約為規格來源", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 的 C# 參考實作定位。 ");
     }
+    return Task.CompletedTask;
+}
+
+static Task CoreTreeCapabilityContractIsStable()
+{
+    var contract = File.ReadAllText(ProjectPath("docs", "design", "core-tree-capability-contract.md"));
+    foreach (var token in new[]
+    {
+        "core-tree-capabilities/1", "Equal", "Different", "None", "Unique", "Ambiguous",
+        "TextDecodeFallback", "MultipleTargetMappings", "CustomerAdditionCollidesWithTarget",
+        "InvalidRequest", "InputDirectoryMissing", "VersionEvidenceMismatch", "RequiredTreeStructureMissing",
+        "InputDirectoryOverlap", "InputOutputOverlap", "InvalidServerRuleSet", "RuleChecksumMismatch",
+        "OutputAttemptAlreadyExists", "FileReadError",
+        "ReadyToComplete", "Blocked", "Incomplete", "Completed"
+    })
+        Assert.True(contract.Contains($"`{token}`", StringComparison.Ordinal), $"共用契約缺少穩定 token `{token}`。");
     return Task.CompletedTask;
 }
 
