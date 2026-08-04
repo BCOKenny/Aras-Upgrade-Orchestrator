@@ -3,16 +3,16 @@
 Type: task
 Status: resolved
 
-- Hardened conformance evidence: `06a95761d8c210efb5a8271793ac36f602274a94`; the Release suite passed 83/83 tests and exercised 33 fixture pairs. It rejects inconsistent declared classifications before output/lease creation. Repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` remains superseded; this issue stays claimed.
+- Hardened conformance evidence: `06a95761d8c210efb5a8271793ac36f602274a94`; the Release suite passed 83/83 tests and exercised 33 fixture pairs. It rejects inconsistent declared classifications before output/lease creation. Repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` remains superseded; at that evidence stage, this issue remained claimed until final verification resolved it.
 
 ## Comments
 
 - Final verification (2026-08-04): `dotnet build ArasUpgradeOrchestrator.sln -c Release` exited 0 with 0 warnings and 0 errors; `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release` exited 0 with 83/83 tests passed; all five child acceptance roots contain 33 `input.json` and 33 `expected/result.json` fixture pairs; `dotnet format ArasUpgradeOrchestrator.sln --no-restore --verify-no-changes` exited 0; `git diff --check` exited 0. The hardened authoritative C# conformance implementation remains `06a95761d8c210efb5a8271793ac36f602274a94`; superseded evidence `c7a88e54835fcf858fa0b1059070e1a1648d519a` and `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` is retained. Implementation and evidence history: `9ddc4b6`, `c00d5e6`, `fc3c25d`, `8fb04ff`, `9f9eeff`, `3901a08`, `875cac1`, `4a125f3`, `4230e6c`, `e56eda0`, `b3788b2`, `4bb5e3f`, `8939139`, `4f9ed2b`, `092c37b`, `c7a88e5`, `6dbe5b3`, `d3dbd95`, `d6c7bab`, `06a9576`, `826fe39`; follow-up verification formatting/documentation commits: `c055da3` (pre-existing base formatting only), `82c62ee`, `4b547b0`. `c055da3` normalizes only formatter diagnostics unchanged from base `26439b8`. Deliberately deferred: UI, CLI, live case command/action remain outside this Core Tree-only pilot; Skill Creator `quick_validate.py` remains unavailable because PyYAML is absent and its Chinese short-description minimum rejects approved exact metadata, while repository package tests pass. `.scratch/aras-upgrade-orchestrator/map.md` does not exist, so no map pointer was added.
 
-- C# `ArasUpgradeOrchestrator.Core/CoreTrees` 已通過 `core-tree-capabilities/1` 的 33 組 JSON fixture；正式提交識別碼待第一個符合性提交建立後補記。本 issue 維持 claimed，交由最終驗證工作關閉。
+- C# `ArasUpgradeOrchestrator.Core/CoreTrees` 已通過 `core-tree-capabilities/1` 的 33 組 JSON fixture；正式提交識別碼待第一個符合性提交建立後補記。當時本 issue 維持 claimed，後續由最終驗證工作關閉。
 - Conformance evidence: `c7a88e54835fcf858fa0b1059070e1a1648d519a`; `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release` 結果為 81/81 tests passed，33 組 fixture input/result pairs 已全部執行。
 - Repair pending: the prior C# conformance evidence is superseded because delivery reclassified rather than consuming a declared classification. Repair verification and a replacement immutable commit reference are required before this issue can be closed.
-- Repaired conformance evidence: `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58`; `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release` 結果為 82/82 tests passed，33 組 fixture input/result pairs 已全部執行。先前 `c7a88e54835fcf858fa0b1059070e1a1648d519a` 證據已被取代，issue 維持 claimed 等待最終驗證關閉。
+- Repaired conformance evidence: `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58`; `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release` 結果為 82/82 tests passed，33 組 fixture input/result pairs 已全部執行。先前 `c7a88e54835fcf858fa0b1059070e1a1648d519a` 證據已被取代；當時 issue 維持 claimed，等待後續最終驗證關閉。
 
 ## 目標
 
