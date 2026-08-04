@@ -3,6 +3,8 @@
 Type: task
 Status: claimed
 
+- Hardened validation pending: repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` is superseded because declared classifications could claim `ReadyToComplete` while retaining a review or error. This issue remains claimed until the replacement immutable evidence is recorded.
+
 ## Comments
 
 - C# `ArasUpgradeOrchestrator.Core/CoreTrees` 已通過 `core-tree-capabilities/1` 的 33 組 JSON fixture；正式提交識別碼待第一個符合性提交建立後補記。本 issue 維持 claimed，交由最終驗證工作關閉。

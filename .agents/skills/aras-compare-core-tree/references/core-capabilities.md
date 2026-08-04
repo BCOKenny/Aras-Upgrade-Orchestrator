@@ -24,6 +24,6 @@
 - Implementation: `ArasUpgradeOrchestrator.Core/CoreTrees`
 - Contract: `core-tree-capabilities/1`
 - Test: `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release`
-- Conformance: repaired by `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` (82/82 tests passed; 33 fixture pairs exercised). Previous `c7a88e54835fcf858fa0b1059070e1a1648d519a` remains superseded.
+- Conformance: superseded by pending hardened-validation evidence. The repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` did not reject inconsistent declared classifications; `c7a88e54835fcf858fa0b1059070e1a1648d519a` remains superseded.
 
 此處不記錄各子 Skill 的錯誤代碼表、fixture schema 或詳細規則；需要時讀取被路由子 Skill 的契約與資產。

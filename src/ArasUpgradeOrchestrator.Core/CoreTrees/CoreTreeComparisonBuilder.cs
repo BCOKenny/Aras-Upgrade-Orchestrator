@@ -40,7 +40,52 @@ public static class CoreTreeComparisonBuilder
             !string.Equals(Path.GetFullPath(classification.OutputRoot), Path.GetFullPath(request.OutputRoot), StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(classification.ServerRuleVersion, request.ServerTextRules.Version, StringComparison.Ordinal) ||
             !string.Equals(classification.ServerRuleChecksum, request.ServerTextRules.Checksum, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("The declared Core Tree classification does not match the delivery request.");
+            throw InvalidClassification("已宣告的 Core Tree 分類結果與交付請求不一致。 ");
+        if (classification.Status is not (CoreTreeComparisonStatus.ReadyToComplete or CoreTreeComparisonStatus.Blocked))
+            throw InvalidClassification("交付只接受 ReadyToComplete 或 Blocked 的分類結果。 ");
+        if (classification.Status == CoreTreeComparisonStatus.ReadyToComplete &&
+            (classification.ManualReviews.Count != 0 || classification.Errors.Count != 0))
+            throw InvalidClassification("ReadyToComplete 分類結果不得包含人工確認或錯誤。 ");
+        if (classification.Status == CoreTreeComparisonStatus.Blocked &&
+            classification.ManualReviews.Count == 0 && classification.Errors.Count == 0)
+            throw InvalidClassification("Blocked 分類結果必須包含人工確認或錯誤。 ");
+
+        foreach (var item in classification.Items)
+        {
+            EnsureSafeCoreTreePath(item.SourceRelativePath, "來源檔案");
+            switch (item.Classification)
+            {
+                case CoreTreeClassification.A:
+                case CoreTreeClassification.B:
+                    if (item.TargetRelativePath is not null)
+                        throw InvalidClassification("A 或 B 分類不得指定目標檔案。 ");
+                    break;
+                case CoreTreeClassification.C:
+                    EnsureSafeCoreTreePath(item.TargetRelativePath, "目標檔案");
+                    break;
+                default:
+                    throw InvalidClassification("分類項目包含不支援的分類。 ");
+            }
+        }
+
+        foreach (var review in classification.ManualReviews)
+        {
+            EnsureSafeCoreTreePath(review.SourceRelativePath, "人工確認檔案");
+            foreach (var candidate in review.TargetCandidates) EnsureSafeCoreTreePath(candidate, "人工確認候選檔案");
+        }
+        foreach (var error in classification.Errors) EnsureSafeCoreTreePath(error.RelativePath, "錯誤檔案");
+        foreach (var notice in classification.Notices) EnsureSafeCoreTreePath(notice.RelativePath, "通知檔案");
+    }
+
+    private static CoreTreeValidationException InvalidClassification(string message) => new("InvalidRequest", message);
+
+    private static void EnsureSafeCoreTreePath(string? path, string label)
+    {
+        if (string.IsNullOrWhiteSpace(path)) throw InvalidClassification($"{label}不可為空。 ");
+        var normalized = path.Replace('\\', '/');
+        if (Path.IsPathRooted(path) || normalized.Split('/').Any(segment => segment is "" or "." or "..") ||
+            (!normalized.StartsWith("Client/", StringComparison.OrdinalIgnoreCase) && !normalized.StartsWith("Server/", StringComparison.OrdinalIgnoreCase)))
+            throw InvalidClassification($"{label}必須是 Client 或 Server 下的安全相對路徑。 ");
     }
 
     private static async Task<CoreTreeComparisonResult> WriteDeliveryAsync(

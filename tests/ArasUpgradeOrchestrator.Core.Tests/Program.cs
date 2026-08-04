@@ -77,6 +77,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree builder 建立新嘗試產出且保持三份輸入不變", CoreTreeBuilderProducesCompletedOutput)
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree 交付必須使用已宣告的阻擋分類且不得重新分類", CoreTreeBuilderUsesDeclaredClassification)
+    ,("Core Tree 交付拒絕不一致或不安全的已宣告分類", CoreTreeBuilderRejectsInvalidDeclaredClassification)
     ,("Core Tree 驗證與比較使用穩定錯誤代碼", CoreTreeStableContractCodes)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
@@ -1595,6 +1596,54 @@ static async Task CoreTreeBuilderUsesDeclaredClassification()
     Assert.True(File.Exists(Path.Combine(request.OutputRoot, "incomplete-manifest.json")));
     Assert.False(Directory.Exists(Path.Combine(request.OutputRoot, "C")));
     Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
+}
+
+static async Task CoreTreeBuilderRejectsInvalidDeclaredClassification()
+{
+    await using var scope = TestScope.Create();
+    var baseRequest = CreateCoreTreeRequest(scope.Root);
+    var leases = new DirectoryLeaseManager(scope.ToolDataRoot);
+    CoreTreeComparisonResult Declared(string name, CoreTreeComparisonStatus status, IReadOnlyList<CoreTreeClassifiedItem>? items = null,
+        IReadOnlyList<CoreTreeManualReview>? reviews = null, IReadOnlyList<CoreTreeComparisonError>? errors = null)
+    {
+        var output = Path.Combine(scope.Root, name);
+        return new(baseRequest.AttemptId, status, items ?? [], reviews ?? [], errors ?? [], [], output,
+            baseRequest.ServerTextRules.Version, baseRequest.ServerTextRules.Checksum, baseRequest.StartedAt, DateTimeOffset.UtcNow);
+    }
+
+    var invalid = new[]
+    {
+        Declared("ready-review", CoreTreeComparisonStatus.ReadyToComplete, reviews:
+            [new CoreTreeManualReview("Client/app.js", "MultipleTargetMappings", null, [], "review")]),
+        Declared("ready-error", CoreTreeComparisonStatus.ReadyToComplete, errors:
+            [new CoreTreeComparisonError("Client/app.js", "FileReadError", "error")]),
+        Declared("blocked-empty", CoreTreeComparisonStatus.Blocked),
+        Declared("incomplete", CoreTreeComparisonStatus.Incomplete),
+        Declared("completed", CoreTreeComparisonStatus.Completed),
+        Declared("a-has-target", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.A, "Client/app.js", "Client/app.ts")]),
+        Declared("c-missing-target", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/app.js", null)]),
+        Declared("unsafe-path", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "Client/../unsafe.js", null)]),
+        Declared("empty-path", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "", null)]),
+        Declared("rooted-path", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "C:\\unsafe.js", null)]),
+        Declared("outside-core-tree", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "Custom/app.js", null)]),
+        Declared("unsafe-target", CoreTreeComparisonStatus.ReadyToComplete,
+            [new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/app.js", "Custom/app.ts")])
+    };
+
+    foreach (var classification in invalid)
+    {
+        var request = baseRequest with { OutputRoot = classification.OutputRoot };
+        await Assert.ThrowsAsync<CoreTreeValidationException>(() =>
+            CoreTreeComparisonBuilder.BuildFromClassificationAsync(request, classification, leases));
+        Assert.False(Directory.Exists(request.OutputRoot));
+        Assert.False(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
+    }
 }
 
 static async Task WriteCoreTreeFile(string innovatorRoot, string relativePath, string content)
