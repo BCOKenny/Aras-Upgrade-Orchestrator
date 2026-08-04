@@ -79,6 +79,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
     ,("Core Tree 細項能力 Skill 具有穩定共用契約", CoreTreeCapabilityContractIsStable)
+    ,("Core Tree 輸入驗證 Skill 具有完整契約與驗收案例", CoreTreeInputValidationSkillPackageIsComplete)
 };
 
 var failures = new List<string>();
@@ -1598,6 +1599,13 @@ static Task CoreTreeCapabilityContractIsStable()
         "ReadyToComplete", "Blocked", "Incomplete", "Completed"
     })
         Assert.True(contract.Contains($"`{token}`", StringComparison.Ordinal), $"共用契約缺少穩定 token `{token}`。");
+    return Task.CompletedTask;
+}
+
+static Task CoreTreeInputValidationSkillPackageIsComplete()
+{
+    CoreTreeCapabilitySkillTests.AssertPackage("aras-validate-core-tree-inputs",
+        ["valid-inputs", "version-mismatch", "missing-structure", "overlapping-output", "rule-checksum-mismatch"]);
     return Task.CompletedTask;
 }
 

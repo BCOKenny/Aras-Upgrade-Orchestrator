@@ -7,5 +7,5 @@
   "sourceOotb": { "rootId": "ootb-12sp9", "innovatorVersion": "12SP9", "evidenceReference": "evidence/ootb-12sp9-version.txt", "hasClient": true, "hasServer": true },
   "targetOotb": { "rootId": "ootb-r38", "innovatorVersion": "R38", "evidenceReference": "evidence/ootb-r38-version.txt", "hasClient": true, "hasServer": true },
   "outputRelation": "separate-new-attempt",
-  "serverRules": { "version": "r38-server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "447FB7778893E56462299AED6A554307D4182A45F9B934B1287F3C9224F57AA7", "checksumValid": true }
+  "serverRules": { "version": "r38-server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "A1B2C3", "checksumValid": true }
 }

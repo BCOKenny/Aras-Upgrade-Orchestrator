@@ -5,8 +5,6 @@ description: Use when Codex 需要在 Core Tree 比較前驗證三份輸入、�
 
 # 驗證 Core Tree 比較輸入
 
-直接指令：**「使用 aras-validate-core-tree-inputs 驗證三份 Core Tree 是否可開始比較。」**
-
 直接指令：**「驗證這三份 Core Tree 是否可以開始比較」**。
 
 此 Skill 只判定比較前置條件；不讀取或比較檔案內容、不解析邏輯檔案、不做 A／B／C 分類，也不複製、合併或修改 R38 Core Tree。

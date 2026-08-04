@@ -4,5 +4,5 @@
   "status": "Blocked",
   "result": { "validatedInputs": [] },
   "messages": [{ "kind": "Error", "code": "RequiredTreeStructureMissing", "relativePath": "Server", "details": { "input": "targetOotb" } }],
-  "evidence": { "inputIds": ["customer-12sp9", "ootb-12sp9", "ootb-r38"], "ruleVersion": "r38-server-text/1", "ruleChecksum": "447FB7778893E56462299AED6A554307D4182A45F9B934B1287F3C9224F57AA7" }
+  "evidence": { "inputIds": ["customer-12sp9", "ootb-12sp9", "ootb-r38"], "ruleVersion": "r38-server-text/1", "ruleChecksum": "A1B2C3" }
 }
