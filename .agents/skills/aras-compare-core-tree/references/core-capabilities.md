@@ -24,6 +24,6 @@
 - Implementation: `ArasUpgradeOrchestrator.Core/CoreTrees`
 - Contract: `core-tree-capabilities/1`
 - Test: `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release`
-- Conformance: pending commit evidence
+- Conformance: `c7a88e54835fcf858fa0b1059070e1a1648d519a` (81/81 tests passed; 33 fixture pairs exercised)
 
 此處不記錄各子 Skill 的錯誤代碼表、fixture schema 或詳細規則；需要時讀取被路由子 Skill 的契約與資產。
