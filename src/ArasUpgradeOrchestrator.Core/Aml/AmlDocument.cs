@@ -63,8 +63,8 @@ public sealed class AmlNode
     {
         yield return this;
         foreach (var child in _children)
-        foreach (var descendant in child.DescendantsAndSelf())
-            yield return descendant;
+            foreach (var descendant in child.DescendantsAndSelf())
+                yield return descendant;
     }
 
     public XElement CloneSubtree() => new(_element);

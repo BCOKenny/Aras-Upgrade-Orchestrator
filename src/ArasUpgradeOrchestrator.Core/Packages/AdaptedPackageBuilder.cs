@@ -207,11 +207,22 @@ public static class AdaptedPackageFinalizer
         await using var stream = new FileStream(manifestPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         await JsonSerializer.SerializeAsync(stream, new
         {
-            state = "Completed", completed.AttemptId, completed.SourceVersion, completed.TargetVersion,
-            completed.SourceWorkRoot, completed.SolutionsRoot, completed.SolutionsBackupRoot,
-            completed.Rule1ArchivePath, completed.Rule1ArchiveChecksum, completed.Rule2RuleSets,
-            completed.Rule2EffectiveChecksum, completed.StartedAt, completed.FinishedAt, completedAt,
-            completed.XmlFilesProcessed, completed.ManualReviewCount
+            state = "Completed",
+            completed.AttemptId,
+            completed.SourceVersion,
+            completed.TargetVersion,
+            completed.SourceWorkRoot,
+            completed.SolutionsRoot,
+            completed.SolutionsBackupRoot,
+            completed.Rule1ArchivePath,
+            completed.Rule1ArchiveChecksum,
+            completed.Rule2RuleSets,
+            completed.Rule2EffectiveChecksum,
+            completed.StartedAt,
+            completed.FinishedAt,
+            completedAt,
+            completed.XmlFilesProcessed,
+            completed.ManualReviewCount
         }, JsonOptions, cancellationToken);
         return completed;
     }
