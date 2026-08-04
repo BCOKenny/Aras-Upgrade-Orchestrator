@@ -42,9 +42,9 @@ public static class CoreTreeInputValidator
         var roots = new[] { request.Customer.RootPath, request.SourceOotb.RootPath, request.TargetOotb.RootPath }
             .Select(Path.GetFullPath).ToArray();
         for (var left = 0; left < roots.Length; left++)
-        for (var right = left + 1; right < roots.Length; right++)
-            if (Overlaps(roots[left], roots[right]))
-                throw new CoreTreeValidationException("InputDirectoryOverlap", "三份 Core Tree 輸入必須是互不重疊的獨立目錄。 ");
+            for (var right = left + 1; right < roots.Length; right++)
+                if (Overlaps(roots[left], roots[right]))
+                    throw new CoreTreeValidationException("InputDirectoryOverlap", "三份 Core Tree 輸入必須是互不重疊的獨立目錄。 ");
 
         if (string.IsNullOrWhiteSpace(request.ServerTextRules.Version) ||
             string.IsNullOrWhiteSpace(request.ServerTextRules.Checksum))
