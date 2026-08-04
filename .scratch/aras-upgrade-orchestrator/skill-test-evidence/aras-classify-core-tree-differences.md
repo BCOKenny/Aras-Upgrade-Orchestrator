@@ -12,7 +12,7 @@ Prompt（每次相同）：
 
 ### RED-1
 
-Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）  
+Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）
 Outcome: Fail — 命名父 Skill 且要求建立 D，未輸出兩項指定 ManualReview／Blocked。
 
 ```text
@@ -26,7 +26,7 @@ Outcome: Fail — 命名父 Skill 且要求建立 D，未輸出兩項指定 Manu
 
 ### RED-2
 
-Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）  
+Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）
 Outcome: Fail — 直接將碰撞檔案列 A、建立 D，且未命名 child Skill。
 
 ```text
@@ -39,7 +39,7 @@ Outcome: Fail — 直接將碰撞檔案列 A、建立 D，且未命名 child Ski
 
 ### RED-3
 
-Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）  
+Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）
 Outcome: Fail — 雖拒絕 D，仍命名父 Skill，未指定所需 ManualReview codes 與整體 `Blocked`。
 
 ```text
@@ -50,7 +50,7 @@ Outcome: Fail — 雖拒絕 D，仍命名父 Skill，未指定所需 ManualRevie
 
 ### RED-4
 
-Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）  
+Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）
 Outcome: Fail — 未命名 child Skill，未指定所需 ManualReview codes 與整體 `Blocked`。
 
 ```text
@@ -63,7 +63,7 @@ Outcome: Fail — 未命名 child Skill，未指定所需 ManualReview codes 與
 
 ### RED-5
 
-Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）  
+Timestamp: `2026-08-04`（evaluator transport 未提供可保存的時分秒）
 Outcome: Fail — 命名父 Skill、建立 D，未使用指定 ManualReview codes。
 
 ```text
@@ -86,8 +86,8 @@ Prompt（每次相同）：
 
 ### GREEN-Terra-1
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill 均完整。
 
 ```text
@@ -101,8 +101,8 @@ Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill
 
 ### GREEN-Terra-2
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Fail — 錯誤接受「建立 D 類人工確認」。
 
 ```text
@@ -120,8 +120,8 @@ Outcome: Fail — 錯誤接受「建立 D 類人工確認」。
 
 ### GREEN-Terra-3
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill 均完整。
 
 ```text
@@ -136,8 +136,8 @@ Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill
 
 ### GREEN-Terra-4
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Fail — 錯誤建立 D 類 item。
 
 ```text
@@ -155,8 +155,8 @@ Outcome: Fail — 錯誤建立 D 類 item。
 
 ### GREEN-Terra-5
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill 均完整。
 
 ```text
@@ -171,8 +171,8 @@ Outcome: Pass — 拒絕 A、D，兩項 ManualReview、`Blocked` 與 child Skill
 
 ### GREEN-Terra-6
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Fail — 錯誤建立 D 類 item。
 
 ```text
@@ -189,8 +189,8 @@ Outcome: Fail — 錯誤建立 D 類 item。
 
 ### GREEN-Terra-7
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Fail — 錯誤建立 D 類。
 
 ```text
@@ -204,8 +204,8 @@ Outcome: Fail — 錯誤建立 D 類。
 
 ### GREEN-Terra-8
 
-Timestamp: `2026-08-04`  
-Model: `gpt-5.6-terra` / `medium`  
+Timestamp: `2026-08-04`
+Model: `gpt-5.6-terra` / `medium`
 Outcome: Fail — 錯誤建立 D 類。
 
 ```text
@@ -222,7 +222,7 @@ Outcome: Fail — 錯誤建立 D 類。
 
 #### GREEN-Sol-1
 
-Timestamp: `2026-08-04`  
+Timestamp: `2026-08-04`
 Outcome: Pass.
 
 ```text
@@ -237,7 +237,7 @@ Outcome: Pass.
 
 #### GREEN-Sol-2
 
-Timestamp: `2026-08-04`  
+Timestamp: `2026-08-04`
 Outcome: Pass.
 
 ```text
@@ -252,7 +252,7 @@ Outcome: Pass.
 
 #### GREEN-Sol-3
 
-Timestamp: `2026-08-04`  
+Timestamp: `2026-08-04`
 Outcome: Pass.
 
 ```text
@@ -267,7 +267,7 @@ Outcome: Pass.
 
 #### GREEN-Sol-4
 
-Timestamp: `2026-08-04`  
+Timestamp: `2026-08-04`
 Outcome: Pass.
 
 ```text
@@ -283,7 +283,7 @@ Outcome: Pass.
 
 #### GREEN-Sol-5
 
-Timestamp: `2026-08-04`  
+Timestamp: `2026-08-04`
 Outcome: Pass.
 
 ```text
