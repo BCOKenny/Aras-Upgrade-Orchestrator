@@ -13,13 +13,7 @@
 ### RED-1
 
 - Timestamp: `2026-08-04T15:19:00+08:00`
-- Raw response:
-
-  ```text
-  使用 `aras-compare-core-tree`。
-
-  我會將三個 R38 檔案列為候選，不自動完成配對；副檔名演進加上多個候選屬於需人工確認的情境。較像內容的另一目錄 `app.ts` 可列為最高優先候選，但需確認其目錄語意與來源對應後，才把 `Client/scripts/app.js` 配對至它。
-  ```
+- Raw response: `使用 aras-compare-core-tree。…另一個目錄內容較像的 app.ts 可列為最高優先候選，但需確認其目錄語意與來源對應後，才把 Client/scripts/app.js 配對至它。`
 - Outcome: **Fail**
 - Reason: 命名父 Skill，跨目錄並以內容相似度建立優先候選，未回傳必要的 child Skill 與完整人工確認結果。
 
@@ -66,78 +60,31 @@
 ### GREEN-1
 
 - Timestamp: `2026-08-04T15:29:00+08:00`
-- Raw response:
-
-  ```text
-  使用 `aras-resolve-core-tree-file-mappings`。
-
-  無法安全完成配對：`Client/scripts/app.js` 依 `.js → .ts/.tsx` 演進規則，得到同目錄兩個候選：
-
-  - `Client/scripts/app.ts`
-  - `Client/scripts/app.tsx`
-
-  因此結果必須是 `Ambiguous`／`Blocked`，並標記 `ManualReview`（`MultipleTargetMappings`）。另一個目錄中內容較像的 `app.ts` 不能用內容相似度來解除這個路徑演進歧義。
-  ```
+- Raw response: `使用 aras-resolve-core-tree-file-mappings。…Client/scripts/app.ts 與 Client/scripts/app.tsx…結果必須是 Ambiguous／Blocked，並標記 ManualReview（MultipleTargetMappings）。另一個目錄中內容較像的 app.ts 不能用內容相似度來解除這個路徑演進歧義。`
 - Outcome: **Pass**
 
 ### GREEN-2
 
 - Timestamp: `2026-08-04T15:30:00+08:00`
-- Raw response:
-
-  ```text
-  使用的 Skill：`aras-resolve-core-tree-file-mappings`。
-
-  我會先檢查 exact path；若沒有 `Client/scripts/app.js`，僅在同一目錄尋找同主檔名的允許演進。`Client/scripts/app.ts` 與 `Client/scripts/app.tsx` 都是 `.js` 的合法候選，因此結果必須是：
-
-  - `status: Blocked`
-  - `mapping: Ambiguous`
-  - 候選：`Client/scripts/app.ts`、`Client/scripts/app.tsx`
-  - 訊息：`ManualReview`／`MultipleTargetMappings`
-  - `appliedEvolution: .js → .ts／.tsx`
-
-  另一個目錄中、內容看起來較像的 `app.ts` 不可納入；此 Skill 不跨目錄、也不比較內容或以「最可能」自動選擇。因此不能完成自動配對，須由人工指定其中一個同目錄候選。
-  ```
+- Raw response: `使用的 Skill：aras-resolve-core-tree-file-mappings。…status: Blocked；mapping: Ambiguous；候選：Client/scripts/app.ts、Client/scripts/app.tsx；訊息：ManualReview／MultipleTargetMappings。另一個目錄中、內容看起來較像的 app.ts 不可納入。`
 - Outcome: **Pass**
 
 ### GREEN-3
 
 - Timestamp: `2026-08-04T15:30:00+08:00`
-- Raw response:
-
-  ```text
-  使用 `aras-resolve-core-tree-file-mappings`。
-
-  我不會選擇任何一個「最可能」檔案或完成自動配對：同目錄的 `app.ts` 與 `app.tsx` 都是 `Client/scripts/app.js` 合法的 `.js → .ts/.tsx` 演進候選，因此結果必須是 `Ambiguous / Blocked`，並等待人工確認。另一個目錄中內容較像的 `app.ts` 不得納入，因為此 Skill 禁止跨目錄與內容相似度比對。
-  ```
+- Raw response: `使用 aras-resolve-core-tree-file-mappings。我不會選擇任何一個「最可能」檔案…結果必須是 Ambiguous / Blocked，並等待人工確認。另一個目錄中內容較像的 app.ts 不得納入。`
 - Outcome: **Pass**
 
 ### GREEN-4
 
 - Timestamp: `2026-08-04T15:31:00+08:00`
-- Raw response:
-
-  ```text
-  使用 `aras-resolve-core-tree-file-mappings`。
-
-  我不會自動選擇或完成配對：同目錄的 `app.ts` 與 `app.tsx` 都是 `app.js` 合法的副檔名演進候選，因此結果必須是 `Blocked / Ambiguous`，並標示 `ManualReview`／`MultipleTargetMappings`。
-
-  另一個目錄中內容較像的 `app.ts` 不可納入，因為此 Skill 禁止跨目錄與內容相似度判定。
-  ```
+- Raw response: `使用 aras-resolve-core-tree-file-mappings。我不會自動選擇或完成配對…結果必須是 Blocked / Ambiguous，並標示 ManualReview／MultipleTargetMappings。另一個目錄中內容較像的 app.ts 不可納入。`
 - Outcome: **Pass**
 
 ### GREEN-5
 
 - Timestamp: `2026-08-04T15:31:00+08:00`
-- Raw response:
-
-  ```text
-  我使用 **`aras-resolve-core-tree-file-mappings`**。
-
-  無法安全地替你選擇其中一個並完成配對：`Client/scripts/app.js` 在同一路徑下同時演進為 `app.ts` 與 `app.tsx`，依規則屬於 `Ambiguous`，應回傳 `Blocked` 與 `ManualReview / MultipleTargetMappings`。
-
-  另一個目錄中內容較相似的 `app.ts` 不可用來打破平手；此 Skill 不允許以內容相似度或跨目錄候選來猜測配對。
-  ```
+- Raw response: `我使用 aras-resolve-core-tree-file-mappings。無法安全地替你選擇其中一個並完成配對…屬於 Ambiguous，應回傳 Blocked 與 ManualReview / MultipleTargetMappings。另一個目錄中內容較相似的 app.ts 不可用來打破平手。`
 - Outcome: **Pass**
 
 ## REFACTOR 與驗證
