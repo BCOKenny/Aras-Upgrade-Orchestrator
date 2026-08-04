@@ -21,8 +21,11 @@ public sealed record CoreTreeServerTextRuleSet(
     public static CoreTreeServerTextRuleSet Create(string version, IEnumerable<string> relativePaths)
     {
         if (string.IsNullOrWhiteSpace(version)) throw new ArgumentException("規則版本不可為空。", nameof(version));
-        var paths = relativePaths.Select(path => path.Replace('\\', '/').TrimStart('/'))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+        ArgumentNullException.ThrowIfNull(relativePaths);
+        var paths = relativePaths.ToArray();
+        if (paths.Any(path => !IsCanonicalServerRelativePath(path)))
+            throw new ArgumentException("Server text rule paths must be canonical relative Server paths.", nameof(relativePaths));
+        paths = CoreTreePathOrdering.ByPath(paths).ToArray();
         return new(version, CalculateChecksum(version, paths), paths);
     }
 
@@ -32,6 +35,16 @@ public sealed record CoreTreeServerTextRuleSet(
             .Select(path => path.Replace('\\', '/').TrimStart('/').ToUpperInvariant())
             .OrderBy(path => path, StringComparer.Ordinal));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    internal static bool IsCanonicalServerRelativePath(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path) || path.StartsWith('/') || path.StartsWith('\\')) return false;
+        if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':') return false;
+        if (path.Contains('\\')) return false;
+        var segments = path.Split('/', StringSplitOptions.None);
+        return segments.Length > 1 && string.Equals(segments[0], "Server", StringComparison.Ordinal) &&
+            segments.All(segment => segment is not ("" or "." or ".."));
     }
 }
 

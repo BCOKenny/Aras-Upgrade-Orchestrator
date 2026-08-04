@@ -69,10 +69,10 @@ public static class CoreTreeComparisonEngine
         return new CoreTreeComparisonResult(
             request.AttemptId,
             reviews.Count == 0 && errors.Count == 0 ? CoreTreeComparisonStatus.ReadyToComplete : CoreTreeComparisonStatus.Blocked,
-            items.OrderBy(item => item.SourceRelativePath, StringComparer.OrdinalIgnoreCase).ToArray(),
-            reviews.OrderBy(review => review.SourceRelativePath, StringComparer.OrdinalIgnoreCase).ToArray(),
-            errors.OrderBy(error => error.RelativePath, StringComparer.OrdinalIgnoreCase).ToArray(),
-            notices.OrderBy(notice => notice.RelativePath, StringComparer.OrdinalIgnoreCase).ToArray(),
+            CoreTreePathOrdering.ByPath(items, item => item.SourceRelativePath).ToArray(),
+            CoreTreePathOrdering.ByPath(reviews, review => review.SourceRelativePath).ToArray(),
+            CoreTreePathOrdering.ByPath(errors, error => error.RelativePath).ToArray(),
+            CoreTreePathOrdering.ByPath(notices, notice => notice.RelativePath).ToArray(),
             Path.GetFullPath(request.OutputRoot),
             request.ServerTextRules.Version,
             request.ServerTextRules.Checksum,
@@ -83,5 +83,6 @@ public static class CoreTreeComparisonEngine
     private static IEnumerable<string> EnumerateCustomerFiles(string innovatorRoot) =>
         new[] { "Client", "Server" }
             .SelectMany(side => Directory.EnumerateFiles(Path.Combine(innovatorRoot, side), "*", SearchOption.AllDirectories))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(path => path, StringComparer.Ordinal);
 }

@@ -21,13 +21,16 @@ public static class CoreTreeInputValidator
             throw new CoreTreeValidationException("InvalidRequest", "Core Tree 嘗試識別不可為空。");
         if (string.IsNullOrWhiteSpace(request.SourceVersion) || string.IsNullOrWhiteSpace(request.TargetVersion))
             throw new CoreTreeValidationException("InvalidRequest", "案件來源與目標版本不可為空。");
+        var inputs = new[] { request.Customer, request.SourceOotb, request.TargetOotb };
+        if (inputs.Any(input => input is null || string.IsNullOrWhiteSpace(input.RootPath)))
+            throw new CoreTreeValidationException("InputDirectoryMissing", "Core Tree input root is required.");
         if (!string.Equals(request.Customer.InnovatorVersion, request.SourceVersion, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(request.SourceOotb.InnovatorVersion, request.SourceVersion, StringComparison.OrdinalIgnoreCase))
             throw new CoreTreeValidationException("VersionEvidenceMismatch", "客戶來源與來源 OOTB 的版本證據必須符合案件來源版本。 ");
         if (!string.Equals(request.TargetOotb.InnovatorVersion, request.TargetVersion, StringComparison.OrdinalIgnoreCase))
             throw new CoreTreeValidationException("VersionEvidenceMismatch", "目標 OOTB 的版本證據必須符合案件目標版本。 ");
 
-        foreach (var input in new[] { request.Customer, request.SourceOotb, request.TargetOotb })
+        foreach (var input in inputs)
         {
             if (string.IsNullOrWhiteSpace(input.EvidenceReference))
                 throw new CoreTreeValidationException("VersionEvidenceMismatch", "三份 Core Tree 輸入都必須有版本證據。 ");
@@ -39,16 +42,17 @@ public static class CoreTreeInputValidator
                     throw new CoreTreeValidationException("RequiredTreeStructureMissing", $"Core Tree 輸入缺少 Innovator\\{side}：{root}");
         }
 
-        var roots = new[] { request.Customer.RootPath, request.SourceOotb.RootPath, request.TargetOotb.RootPath }
-            .Select(Path.GetFullPath).ToArray();
+        var roots = inputs.Select(input => Path.GetFullPath(input.RootPath)).ToArray();
         for (var left = 0; left < roots.Length; left++)
             for (var right = left + 1; right < roots.Length; right++)
                 if (Overlaps(roots[left], roots[right]))
                     throw new CoreTreeValidationException("InputDirectoryOverlap", "三份 Core Tree 輸入必須是互不重疊的獨立目錄。 ");
 
-        if (string.IsNullOrWhiteSpace(request.ServerTextRules.Version) ||
-            string.IsNullOrWhiteSpace(request.ServerTextRules.Checksum))
+        if (request.ServerTextRules is null || string.IsNullOrWhiteSpace(request.ServerTextRules.Version) ||
+            string.IsNullOrWhiteSpace(request.ServerTextRules.Checksum) || request.ServerTextRules.RelativePaths is null)
             throw new CoreTreeValidationException("InvalidServerRuleSet", "Server 文字比較規則必須固定版本與 Checksum。 ");
+        if (request.ServerTextRules.RelativePaths.Any(path => !CoreTreeServerTextRuleSet.IsCanonicalServerRelativePath(path)))
+            throw new CoreTreeValidationException("InvalidServerRuleSet", "Server text rule paths must be canonical relative Server paths.");
         var expectedChecksum = CoreTreeServerTextRuleSet.CalculateChecksum(request.ServerTextRules.Version, request.ServerTextRules.RelativePaths);
         if (!string.Equals(expectedChecksum, request.ServerTextRules.Checksum, StringComparison.OrdinalIgnoreCase))
             throw new CoreTreeValidationException("RuleChecksumMismatch", "Server 文字比較規則 Checksum 與固定內容不符。 ");

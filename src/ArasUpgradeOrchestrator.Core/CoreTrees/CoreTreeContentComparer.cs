@@ -36,7 +36,7 @@ public static class CoreTreeContentComparer
             var left = await TryReadTextAsync(leftPath, cancellationToken);
             var right = await TryReadTextAsync(rightPath, cancellationToken);
             if (left.Text is not null && right.Text is not null)
-                return new(NormalizeLineEndings(left.Text) == NormalizeLineEndings(right.Text),
+                return new(await TextEncodingsMatchAsync(leftPath, rightPath, cancellationToken) && NormalizeLineEndings(left.Text) == NormalizeLineEndings(right.Text),
                     CoreTreeContentComparisonMode.Text, null);
             var equal = await BinaryEqualsAsync(leftPath, rightPath, cancellationToken);
             return new(equal, CoreTreeContentComparisonMode.BinaryFallback,
@@ -82,6 +82,17 @@ public static class CoreTreeContentComparer
 
     private static string NormalizeLineEndings(string value) => value.Replace("\r\n", "\n", StringComparison.Ordinal);
 
+    private static async Task<bool> TextEncodingsMatchAsync(string leftPath, string rightPath, CancellationToken cancellationToken) =>
+        await DetectTextEncodingAsync(leftPath, cancellationToken) == await DetectTextEncodingAsync(rightPath, cancellationToken);
+
+    private static async Task<CoreTreeTextEncoding> DetectTextEncodingAsync(string path, CancellationToken cancellationToken)
+    {
+        var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+        if (bytes.AsSpan().StartsWith(Encoding.Unicode.GetPreamble())) return CoreTreeTextEncoding.Utf16LittleEndian;
+        if (bytes.AsSpan().StartsWith(Encoding.BigEndianUnicode.GetPreamble())) return CoreTreeTextEncoding.Utf16BigEndian;
+        return CoreTreeTextEncoding.Utf8;
+    }
+
     private static async Task<bool> BinaryEqualsAsync(string leftPath, string rightPath, CancellationToken cancellationToken)
     {
         var leftInfo = new FileInfo(leftPath);
@@ -102,6 +113,8 @@ public static class CoreTreeContentComparer
     }
 
     internal static string NormalizeRelativePath(string path) => path.Replace('\\', '/').TrimStart('/');
+
+    private enum CoreTreeTextEncoding { Utf8, Utf16LittleEndian, Utf16BigEndian }
 }
 
 public static class DefaultCoreTreeServerTextRules

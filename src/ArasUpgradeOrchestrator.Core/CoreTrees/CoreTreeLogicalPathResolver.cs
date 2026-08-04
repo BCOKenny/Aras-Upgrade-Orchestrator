@@ -21,11 +21,10 @@ public static class CoreTreeLogicalPathResolver
             return new(CoreTreeLogicalMatchStatus.None, [], null);
         var directory = Path.GetDirectoryName(relative)?.Replace('\\', '/') ?? string.Empty;
         var baseName = Path.GetFileNameWithoutExtension(relative);
-        var candidates = targets
+        var candidates = OrderCandidates(targets
             .Select(target => string.IsNullOrEmpty(directory) ? baseName + target : $"{directory}/{baseName}{target}")
             .Where(candidate => File.Exists(ToFullPath(targetInnovatorRoot, candidate)))
-            .OrderBy(candidate => candidate, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        );
         var status = candidates.Length switch
         {
             0 => CoreTreeLogicalMatchStatus.None,
@@ -34,6 +33,9 @@ public static class CoreTreeLogicalPathResolver
         };
         return new(status, candidates, candidates.Length == 0 ? null : $"{extension} → {string.Join("／", candidates.Select(Path.GetExtension))}");
     }
+
+    public static string[] OrderCandidates(IEnumerable<string> candidates) =>
+        CoreTreePathOrdering.ByPath(candidates).ToArray();
 
     internal static string ToFullPath(string innovatorRoot, string relativePath)
     {

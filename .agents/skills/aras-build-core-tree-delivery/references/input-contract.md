@@ -15,7 +15,7 @@
 }
 ```
 
-- `classificationResult.status` 為 `ReadyToComplete` 才能評估 `Completed`；`Blocked`、人工確認或 Error 只能產生 `Incomplete`。
+- `classificationResult.status` 為 `ReadyToComplete` 才能評估 `Completed`；完整交付請求的 `Blocked` 分類結果也必須交給本 Skill 建立診斷用 `Incomplete`，不得執行後續升級工作。
 - 每個 item 必有 `classification`（A／B／C）、`sourceRelativePath`；C 必有唯一 `targetRelativePath`。
 - file map key 必須是相對於 `Innovator` 的安全 `/` 路徑，value 的 `base64` 是原始 bytes。
 - `outputState.attemptExists=true` 表示目標已存在；能力不得寫入、清理或重新利用該目錄。

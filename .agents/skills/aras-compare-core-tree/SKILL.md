@@ -24,13 +24,14 @@ description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、
 | 比較兩個檔案的內容 | `aras-compare-core-tree-content` | 直接路由；不延伸為整棵樹分類。 |
 | 解析單一來源檔案的 R38 邏輯對應 | `aras-resolve-core-tree-file-mappings` | 直接路由；不猜測候選。 |
 | 只分類三份已驗證 Core Tree | `aras-classify-core-tree-differences` | 此 Skill 會使用 `aras-compare-core-tree-content` 與 `aras-resolve-core-tree-file-mappings`。取得分類結果後停止，不建立交付目錄。 |
-| 建立完整可交接的比較產出 | `aras-build-core-tree-delivery` | 只在完整交付請求時使用，且必須使用已完成的分類結果。 |
+| 建立完整可交接的比較產出 | `aras-build-core-tree-delivery` | 只在完整交付請求時使用，且必須使用已完成的分類結果；`Blocked` 分類結果仍必須路由到 `aras-build-core-tree-delivery`，建立診斷用 `Incomplete`。 |
 
 ## 完整工作流程
 
 完整比較交付固定依序為：`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`。
 
 - 使用者明確要求「只分類」時，在 `aras-classify-core-tree-differences` 完成後停止；不得建立交付目錄。
+- 使用者要求完整交付時，即使分類為 `Blocked`，仍路由至 `aras-build-core-tree-delivery` 建立診斷用 `Incomplete`；回報阻擋原因後停止，不得執行後續升級工作。
 - 使用者要求兩個檔案的內容比較時，路由至 `aras-compare-core-tree-content`。
 - 使用者要求邏輯檔案配對時，路由至 `aras-resolve-core-tree-file-mappings`。
 - 若輸入驗證、分類或交付回報阻擋、錯誤或人工確認，停止後續程序，保留該 Skill 的結果與下一個安全動作。

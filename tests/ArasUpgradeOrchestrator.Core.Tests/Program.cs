@@ -1,3 +1,4 @@
+using System.Text;
 using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.CoreTrees;
@@ -78,6 +79,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree 交付必須使用已宣告的阻擋分類且不得重新分類", CoreTreeBuilderUsesDeclaredClassification)
     ,("Core Tree 交付拒絕不一致或不安全的已宣告分類", CoreTreeBuilderRejectsInvalidDeclaredClassification)
+    ,("Core Tree final-review safety and stability regressions", CoreTreeFinalReviewHardening)
     ,("Core Tree 驗證與比較使用穩定錯誤代碼", CoreTreeStableContractCodes)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
@@ -1367,6 +1369,47 @@ static async Task CoreTreeClientTextComparisonFollowsRules()
     Assert.False(await CoreTreeContentComparer.AreEqualAsync(left, right, "Client/scripts/app.js", rules));
 }
 
+static async Task CoreTreeFinalReviewHardening()
+{
+    await using var scope = TestScope.Create();
+    var request = CreateCoreTreeRequest(scope.Root);
+
+    foreach (var path in new[] { "/Server/a", "Server/..", "Server/.", "Server//a", @"Server\a", @"\Server\a", @"C:\Server\a", "C:/Server/a" })
+    {
+        Assert.Throws<ArgumentException>(() => CoreTreeServerTextRuleSet.Create("server-text-1", [path]));
+        var invalid = request with { ServerTextRules = request.ServerTextRules with { RelativePaths = [path] } };
+        var exception = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalid));
+        Assert.Equal("InvalidServerRuleSet", exception.Code);
+    }
+
+    foreach (var root in new string?[] { null, string.Empty, "  " })
+    {
+        foreach (var invalid in new[]
+        {
+            request with { Customer = request.Customer with { RootPath = root! } },
+            request with { SourceOotb = request.SourceOotb with { RootPath = root! } },
+            request with { TargetOotb = request.TargetOotb with { RootPath = root! } }
+        })
+        {
+            var exception = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalid));
+            Assert.Equal("InputDirectoryMissing", exception.Code);
+        }
+    }
+
+    var utf8 = Path.Combine(scope.Root, "utf8.js");
+    var utf16 = Path.Combine(scope.Root, "utf16.js");
+    await File.WriteAllBytesAsync(utf8, new UTF8Encoding(false).GetBytes("const x=1;\n"));
+    await File.WriteAllBytesAsync(utf16, Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("const x=1;\n")).ToArray());
+    Assert.False(await CoreTreeContentComparer.AreEqualAsync(utf8, utf16, "Client/app.js", request.ServerTextRules));
+
+    Assert.SequenceEqual(
+        ["Client/A.ts", "Client/a.ts"],
+        CoreTreePathOrdering.ByPath(["Client/a.ts", "Client/A.ts"]).ToArray());
+    Assert.SequenceEqual(
+        ["Client/A.ts", "Client/a.ts"],
+        CoreTreeLogicalPathResolver.OrderCandidates(["Client/a.ts", "Client/A.ts"]));
+}
+
 static async Task CoreTreeServerComparisonPinsRuleSet()
 {
     await using var scope = TestScope.Create();
@@ -1675,6 +1718,8 @@ static Task CoreTreeSkillReferencesTestedCore()
     var buildIndex = skill.IndexOf("`aras-build-core-tree-delivery`", StringComparison.Ordinal);
     var routesFullWorkflowInOrder = validateIndex >= 0 && validateIndex < classifyIndex && classifyIndex < buildIndex;
     Assert.True(routesFullWorkflowInOrder, "Parent Core Tree Skill must route validate, classify, then build.");
+    Assert.True(skill.Contains("`Blocked` 分類結果仍必須路由到 `aras-build-core-tree-delivery`", StringComparison.Ordinal),
+        "Parent Core Tree Skill must route a blocked classification to diagnostic delivery.");
     var classificationRoute = skill.Split('\n').First(line => line.Contains("`aras-classify-core-tree-differences`", StringComparison.Ordinal));
     Assert.True(classificationRoute.Contains("`aras-compare-core-tree-content`", StringComparison.Ordinal));
     Assert.True(classificationRoute.Contains("`aras-resolve-core-tree-file-mappings`", StringComparison.Ordinal));
@@ -1769,7 +1814,7 @@ static Task CoreTreeInputValidationSkillPackageIsComplete()
 static Task CoreTreeContentComparisonSkillPackageIsComplete()
 {
     CoreTreeCapabilitySkillTests.AssertPackage("aras-compare-core-tree-content",
-        ["crlf-bom-equal", "whitespace-different", "server-text-rule", "server-binary", "decode-fallback"]);
+        ["crlf-bom-equal", "encoding-different", "whitespace-different", "server-text-rule", "server-binary", "decode-fallback"]);
     return Task.CompletedTask;
 }
 
