@@ -76,6 +76,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 多候選與 A 類碰撞保持人工確認", CoreTreeAmbiguityBlocksClassification)
     ,("Core Tree builder 建立新嘗試產出且保持三份輸入不變", CoreTreeBuilderProducesCompletedOutput)
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
+    ,("Core Tree 驗證與比較使用穩定錯誤代碼", CoreTreeStableContractCodes)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
     ,("Core Tree 細項能力 Skill 具有穩定共用契約", CoreTreeCapabilityContractIsStable)
@@ -84,6 +85,11 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 邏輯檔案配對 Skill 具有完整契約與驗收案例", CoreTreeFileMappingSkillPackageIsComplete)
     ,("Core Tree 差異分類 Skill 具有完整契約與驗收案例", CoreTreeDifferenceClassificationSkillPackageIsComplete)
     ,("Core Tree 比較交付 Skill 具有完整契約與驗收案例", CoreTreeDeliverySkillPackageIsComplete)
+    ,("C# 參考實作符合 Core Tree 輸入驗證案例", CoreTreeCapabilityFixtureTests.ValidateInputsAsync)
+    ,("C# 參考實作符合 Core Tree 內容比較案例", CoreTreeCapabilityFixtureTests.CompareContentAsync)
+    ,("C# 參考實作符合 Core Tree 檔案配對案例", CoreTreeCapabilityFixtureTests.ResolveMappingsAsync)
+    ,("C# 參考實作符合 Core Tree 分類案例", CoreTreeCapabilityFixtureTests.ClassifyDifferencesAsync)
+    ,("C# 參考實作符合 Core Tree 交付案例", CoreTreeCapabilityFixtureTests.BuildDeliveryAsync)
 };
 
 var failures = new List<string>();
@@ -1477,9 +1483,38 @@ static async Task CoreTreeAmbiguityBlocksClassification()
 
     Assert.Equal(CoreTreeComparisonStatus.Blocked, result.Status);
     Assert.Equal(2, result.ManualReviews.Count);
-    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleR38Candidates"));
-    Assert.True(result.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithR38"));
+    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
+    Assert.True(result.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithTarget"));
     Assert.False(result.Items.Any());
+}
+
+static async Task CoreTreeStableContractCodes()
+{
+    await using var scope = TestScope.Create();
+    var request = CreateCoreTreeRequest(scope.Root);
+    var invalidVersionEvidence = request with { Customer = request.Customer with { EvidenceReference = string.Empty } };
+    var validation = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalidVersionEvidence));
+    Assert.Equal("VersionEvidenceMismatch", validation.Code);
+
+    var customer = Path.Combine(request.Customer.RootPath, "Innovator");
+    var source = Path.Combine(request.SourceOotb.RootPath, "Innovator");
+    var target = Path.Combine(request.TargetOotb.RootPath, "Innovator");
+    await WriteCoreTreeFile(customer, "Client/scripts/app.js", "customer");
+    await WriteCoreTreeFile(source, "Client/scripts/app.js", "source");
+    await WriteCoreTreeFile(target, "Client/scripts/app.ts", "target-ts");
+    await WriteCoreTreeFile(target, "Client/scripts/app.tsx", "target-tsx");
+    await WriteCoreTreeFile(customer, "Client/new.htm", "new");
+    await WriteCoreTreeFile(target, "Client/new.html", "collision");
+    var classification = await CoreTreeComparisonEngine.CompareAsync(request);
+    Assert.True(classification.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
+    Assert.True(classification.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithTarget"));
+
+    var unreadable = Path.Combine(customer, "Client", "unreadable.js");
+    await File.WriteAllTextAsync(unreadable, "customer");
+    await WriteCoreTreeFile(source, "Client/unreadable.js", "source");
+    await using var lockHandle = new FileStream(unreadable, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    var fileRead = await CoreTreeComparisonEngine.CompareAsync(request);
+    Assert.True(fileRead.Errors.Any(error => error.Code == "FileReadError"));
 }
 
 static async Task CoreTreeBuilderProducesCompletedOutput()
@@ -1834,10 +1869,10 @@ static class Assert
             throw new InvalidOperationException($"Expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}].");
     }
 
-    public static void Throws<TException>(Action action) where TException : Exception
+    public static TException Throws<TException>(Action action) where TException : Exception
     {
         try { action(); }
-        catch (TException) { return; }
+        catch (TException exception) { return exception; }
         throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
     }
 

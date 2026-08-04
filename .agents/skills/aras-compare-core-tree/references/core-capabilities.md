@@ -19,4 +19,11 @@
 - `CoreTreeComparisonBuilder`: `src/ArasUpgradeOrchestrator.Core/CoreTrees/CoreTreeComparisonBuilder.cs`
 - `DirectoryLeaseManager`: `src/ArasUpgradeOrchestrator.Core/Safety/DirectoryLeaseManager.cs`
 
+## C# 符合性紀錄
+
+- Implementation: `ArasUpgradeOrchestrator.Core/CoreTrees`
+- Contract: `core-tree-capabilities/1`
+- Test: `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release`
+- Conformance: pending commit evidence
+
 此處不記錄各子 Skill 的錯誤代碼表、fixture schema 或詳細規則；需要時讀取被路由子 Skill 的契約與資產。

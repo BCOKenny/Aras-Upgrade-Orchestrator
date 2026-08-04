@@ -8,6 +8,11 @@ public sealed record CoreTreeInputEvidence(
     string InnovatorVersion,
     string EvidenceReference);
 
+public sealed class CoreTreeValidationException(string code, string message) : InvalidOperationException(message)
+{
+    public string Code { get; } = code;
+}
+
 public sealed record CoreTreeServerTextRuleSet(
     string Version,
     string Checksum,
@@ -76,7 +81,7 @@ public sealed record CoreTreeManualReview(
     IReadOnlyList<string> TargetCandidates,
     string Message);
 
-public sealed record CoreTreeComparisonError(string RelativePath, string Message);
+public sealed record CoreTreeComparisonError(string RelativePath, string Code, string Message);
 public sealed record CoreTreeComparisonNotice(string RelativePath, string Code, string Message);
 
 public sealed record CoreTreeComparisonResult(

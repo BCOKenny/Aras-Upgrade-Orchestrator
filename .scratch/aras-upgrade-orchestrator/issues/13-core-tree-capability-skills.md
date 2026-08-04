@@ -3,6 +3,10 @@
 Type: task
 Status: claimed
 
+## Comments
+
+- C# `ArasUpgradeOrchestrator.Core/CoreTrees` 已通過 `core-tree-capabilities/1` 的 33 組 JSON fixture；正式提交識別碼待第一個符合性提交建立後補記。本 issue 維持 claimed，交由最終驗證工作關閉。
+
 ## 目標
 
 依[核准的 Core Tree 細項能力 Skill 架構設計](../../../docs/superpowers/specs/2026-08-04-core-tree-capability-skills-design.md)，建立五項可獨立要求的穩定業務能力之架構決策、共同術語與 Skill Map。

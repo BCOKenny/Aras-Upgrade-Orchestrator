@@ -28,7 +28,7 @@ public static class CoreTreeComparisonEngine
                     var targetMatch = CoreTreeLogicalPathResolver.Resolve(relative, targetRoot);
                     if (targetMatch.Status != CoreTreeLogicalMatchStatus.None)
                     {
-                        reviews.Add(new(relative, "CustomerAdditionCollidesWithR38", targetMatch.AppliedEvolution,
+                        reviews.Add(new(relative, "CustomerAdditionCollidesWithTarget", targetMatch.AppliedEvolution,
                             targetMatch.Candidates, "A 類客戶新增檔案與 R38 邏輯檔案碰撞，必須人工確認。 "));
                     }
                     else
@@ -55,14 +55,14 @@ public static class CoreTreeComparisonEngine
                         items.Add(new(CoreTreeClassification.C, relative, match.Candidates.Single()));
                         break;
                     case CoreTreeLogicalMatchStatus.Ambiguous:
-                        reviews.Add(new(relative, "MultipleR38Candidates", match.AppliedEvolution, match.Candidates,
+                        reviews.Add(new(relative, "MultipleTargetMappings", match.AppliedEvolution, match.Candidates,
                             "副檔名演進反查出多個 R38 候選，不能自動配對。 "));
                         break;
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
             {
-                errors.Add(new(relative, exception.Message));
+                errors.Add(new(relative, "FileReadError", exception.Message));
             }
         }
 
