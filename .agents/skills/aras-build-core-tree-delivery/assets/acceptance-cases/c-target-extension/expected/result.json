@@ -5,12 +5,12 @@
   "result": {
     "outputFiles": [
       { "relativePath": "C/CustomerSource/Client/app.ts", "checksum": "FA7F05DFD5D393A154771A7A64776E490A1A08F6790BE6AC5FA2FFBAB6FF8A92" },
-      { "relativePath": "C/OOTBR38/Client/app.ts", "checksum": "15BC0D8DEFF04C1066C8DAE3CE0C509DC82F3C97068664151AE47AE4D8849158" },
-      { "relativePath": "C/OOTBSource/Client/app.ts", "checksum": "B7C26C4269DB23EECDA13F1722D654F452E42985CEB3C45B536B31903A07390E" }
+      { "relativePath": "C/OOTBSource/Client/app.ts", "checksum": "B7C26C4269DB23EECDA13F1722D654F452E42985CEB3C45B536B31903A07390E" },
+      { "relativePath": "C/OOTBR38/Client/app.ts", "checksum": "15BC0D8DEFF04C1066C8DAE3CE0C509DC82F3C97068664151AE47AE4D8849158" }
     ],
     "manifestFiles": ["completion-manifest.json"],
     "inputBytesUnchanged": true
   },
   "messages": [],
-  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "fixture-server-rules" }
 }
