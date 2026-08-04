@@ -369,7 +369,7 @@ If any GREEN sample misses a named stop condition, add the minimal explicit rule
 - [ ] **Step 9: Commit this Skill only**
 
 ```powershell
-git add -- .agents/skills/aras-validate-core-tree-inputs tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
+git add -- .agents/skills/aras-validate-core-tree-inputs .scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-validate-core-tree-inputs.md tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
 git commit -m "Add Core Tree input validation Skill"
 ```
 
@@ -427,7 +427,12 @@ Each content `input.json` uses `relativePath`, `left.base64`, `right.base64` and
 
 After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-compare-core-tree-content.md`.
 
-Metadata: display `比較 Core Tree 檔案內容`; short description `依 Client／Server 固定規則判定檔案內容是否相同`; exact default prompt references `$aras-compare-core-tree-content`. For all five GREEN samples, require Binary/Different plus the pinned-rule explanation. Commit only this Skill and its test registration as `Add Core Tree content comparison Skill`.
+Metadata: display `比較 Core Tree 檔案內容`; short description `依 Client／Server 固定規則判定檔案內容是否相同`; exact default prompt references `$aras-compare-core-tree-content`. For all five GREEN samples, require Binary/Different plus the pinned-rule explanation. Commit this Skill, its external raw evidence and its test registration as `Add Core Tree content comparison Skill`.
+
+```powershell
+git add -- .agents/skills/aras-compare-core-tree-content .scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-compare-core-tree-content.md tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
+git commit -m "Add Core Tree content comparison Skill"
+```
 
 ---
 
@@ -485,7 +490,12 @@ Each mapping `input.json` uses `sourceRelativePath` and sorted `targetRelativePa
 
 After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-resolve-core-tree-file-mappings.md`.
 
-Metadata: display `解析 Core Tree 邏輯檔案配對`; short description `解析跨版本檔名及副檔名演進的唯一對應`; default prompt names `$aras-resolve-core-tree-file-mappings`. Every GREEN sample must refuse all guessing and return `Ambiguous`. Commit as `Add Core Tree file mapping Skill`.
+Metadata: display `解析 Core Tree 邏輯檔案配對`; short description `解析跨版本檔名及副檔名演進的唯一對應`; default prompt names `$aras-resolve-core-tree-file-mappings`. Every GREEN sample must refuse all guessing and return `Ambiguous`. Commit this Skill, its external raw evidence and its test registration as `Add Core Tree file mapping Skill`.
+
+```powershell
+git add -- .agents/skills/aras-resolve-core-tree-file-mappings .scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-resolve-core-tree-file-mappings.md tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
+git commit -m "Add Core Tree file mapping Skill"
+```
 
 ---
 
@@ -541,7 +551,12 @@ Each classification `input.json` uses three Base64 file maps named `customerFile
 
 After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-classify-core-tree-differences.md`.
 
-Metadata: display `分類 Core Tree 差異`; short description `使用三方比較結果建立 A／B／C 與人工確認`; default prompt names `$aras-classify-core-tree-differences`. Every GREEN sample must reject A direct delivery and D. Commit as `Add Core Tree difference classification Skill`.
+Metadata: display `分類 Core Tree 差異`; short description `使用三方比較結果建立 A／B／C 與人工確認`; default prompt names `$aras-classify-core-tree-differences`. Every GREEN sample must reject A direct delivery and D. Commit this Skill, its external raw evidence and its test registration as `Add Core Tree difference classification Skill`.
+
+```powershell
+git add -- .agents/skills/aras-classify-core-tree-differences .scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-classify-core-tree-differences.md tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
+git commit -m "Add Core Tree difference classification Skill"
+```
 
 ---
 
@@ -597,7 +612,12 @@ Each delivery `input.json` uses `classificationResult`, the three Base64 file ma
 
 After creating the package, run five independent fresh-context GREEN samples with the child Skill. Preserve every raw response, outcome and timestamp only in `.scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-build-core-tree-delivery.md`.
 
-Metadata: display `建立 Core Tree 比較交付`; short description `建立不可覆寫的 A／B／C 目錄與完成狀態`; default prompt names `$aras-build-core-tree-delivery`. Every GREEN sample must refuse all three unsafe requests. Commit as `Add Core Tree delivery Skill`.
+Metadata: display `建立 Core Tree 比較交付`; short description `建立不可覆寫的 A／B／C 目錄與完成狀態`; default prompt names `$aras-build-core-tree-delivery`. Every GREEN sample must refuse all three unsafe requests. Commit this Skill, its external raw evidence and its test registration as `Add Core Tree delivery Skill`.
+
+```powershell
+git add -- .agents/skills/aras-build-core-tree-delivery .scratch/aras-upgrade-orchestrator/skill-test-evidence/aras-build-core-tree-delivery.md tests/ArasUpgradeOrchestrator.Core.Tests/Program.cs
+git commit -m "Add Core Tree delivery Skill"
+```
 
 ---
 
