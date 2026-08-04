@@ -1,6 +1,6 @@
 # `aras-build-core-tree-delivery` 行為測試證據
 
-測試日期：2026-08-04（Asia/Taipei）  
+測試日期：2026-08-04（Asia/Taipei）
 Skill 絕對路徑：`C:\Users\kenny\OneDrive\文件\Aras Upgrade Orchestrator\.worktrees\core-tree-capability-skills\.agents\skills\aras-build-core-tree-delivery`
 
 ## RED：Skill 建立前的獨立評估

@@ -1638,6 +1638,8 @@ static Task CoreTreeDeliverySkillPackageIsComplete()
 {
     CoreTreeCapabilitySkillTests.AssertPackage("aras-build-core-tree-delivery",
         ["categories-layout", "c-target-extension", "input-immutable", "new-attempt", "overwrite-blocked", "incomplete", "completed"]);
+    CoreTreeCapabilitySkillTests.AssertCoreTreeFixturePathArraysAreStablySorted("aras-build-core-tree-delivery",
+        ["categories-layout", "c-target-extension", "input-immutable", "new-attempt", "overwrite-blocked", "incomplete", "completed"]);
     return Task.CompletedTask;
 }
 

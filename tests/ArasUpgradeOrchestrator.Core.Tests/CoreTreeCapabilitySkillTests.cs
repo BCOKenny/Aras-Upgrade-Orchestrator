@@ -18,9 +18,42 @@ internal static class CoreTreeCapabilitySkillTests
         }
     }
 
+    internal static void AssertCoreTreeFixturePathArraysAreStablySorted(string skillName, IReadOnlyList<string> caseIds)
+    {
+        var root = ProjectPath(".agents", "skills", skillName, "assets", "acceptance-cases");
+        foreach (var caseId in caseIds)
+        {
+            AssertPathArray(Path.Combine(root, caseId, "input.json"), "classificationResult.items", "sourceRelativePath");
+            AssertPathArray(Path.Combine(root, caseId, "input.json"), "classificationResult.manualReviews", "relativePath");
+            AssertPathArray(Path.Combine(root, caseId, "input.json"), "classificationResult.errors", "relativePath");
+            AssertPathArray(Path.Combine(root, caseId, "expected", "result.json"), "result.outputFiles", "relativePath");
+            AssertPathArray(Path.Combine(root, caseId, "expected", "result.json"), "messages", "relativePath");
+        }
+    }
+
     private static void Require(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private static void AssertPathArray(string path, string propertyPath, string sortProperty)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        var value = document.RootElement;
+        foreach (var property in propertyPath.Split('.'))
+        {
+            if (!value.TryGetProperty(property, out value)) return;
+        }
+
+        if (value.ValueKind != System.Text.Json.JsonValueKind.Array) return;
+        var paths = value.EnumerateArray()
+            .Where(item => item.TryGetProperty(sortProperty, out _))
+            .Select(item => item.GetProperty(sortProperty).GetString() ?? string.Empty)
+            .ToArray();
+        var sorted = paths.OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+        Assert.SequenceEqual(sorted, paths);
     }
 
     private static string ProjectPath(params string[] segments)

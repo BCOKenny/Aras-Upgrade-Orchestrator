@@ -8,8 +8,8 @@
       { "relativePath": "B/CustomerSource/Client/legacy.js", "checksum": "B6C45863875E34487CA3C155ED145EFE12A74581E27BEFEC5AA661B8EE8CA6DD" },
       { "relativePath": "B/OOTBSource/Client/legacy.js", "checksum": "41CF6794BA4200B839C53531555F0F3998DF4CBB01A4D5CB0B94E3CA5E23947D" },
       { "relativePath": "C/CustomerSource/Client/page.ts", "checksum": "FA7F05DFD5D393A154771A7A64776E490A1A08F6790BE6AC5FA2FFBAB6FF8A92" },
-      { "relativePath": "C/OOTBSource/Client/page.ts", "checksum": "B7C26C4269DB23EECDA13F1722D654F452E42985CEB3C45B536B31903A07390E" },
-      { "relativePath": "C/OOTBR38/Client/page.ts", "checksum": "15BC0D8DEFF04C1066C8DAE3CE0C509DC82F3C97068664151AE47AE4D8849158" }
+      { "relativePath": "C/OOTBR38/Client/page.ts", "checksum": "15BC0D8DEFF04C1066C8DAE3CE0C509DC82F3C97068664151AE47AE4D8849158" },
+      { "relativePath": "C/OOTBSource/Client/page.ts", "checksum": "B7C26C4269DB23EECDA13F1722D654F452E42985CEB3C45B536B31903A07390E" }
     ],
     "manifestFiles": ["completion-manifest.json"]
   },
