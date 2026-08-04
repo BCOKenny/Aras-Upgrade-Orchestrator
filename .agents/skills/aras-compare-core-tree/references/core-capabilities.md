@@ -24,6 +24,6 @@
 - Implementation: `ArasUpgradeOrchestrator.Core/CoreTrees`
 - Contract: `core-tree-capabilities/1`
 - Test: `dotnet run --project tests\ArasUpgradeOrchestrator.Core.Tests -c Release`
-- Conformance: hardened by `06a95761d8c210efb5a8271793ac36f602274a94` (83/83 tests passed; 33 fixture pairs exercised). Repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` and previous `c7a88e54835fcf858fa0b1059070e1a1648d519a` remain superseded.
+- Conformance: authoritative implementation `9c3a508a5b36fdde3d122ef212774245410d33b1` (84/84 tests passed; 34 fixture pairs exercised). Earlier hardened implementation `06a95761d8c210efb5a8271793ac36f602274a94` (83/83; 33 pairs), repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58`, and previous evidence `c7a88e54835fcf858fa0b1059070e1a1648d519a` remain preserved as superseded history.
 
 此處不記錄各子 Skill 的錯誤代碼表、fixture schema 或詳細規則；需要時讀取被路由子 Skill 的契約與資產。
