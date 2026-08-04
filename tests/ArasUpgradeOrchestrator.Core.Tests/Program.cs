@@ -1550,6 +1550,49 @@ static Task CoreTreeSkillReferencesTestedCore()
     var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
     AssertSkillFrontmatter(skill, "aras-compare-core-tree");
     AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-compare-core-tree");
+    foreach (var childSkill in new[]
+    {
+        "aras-validate-core-tree-inputs",
+        "aras-compare-core-tree-content",
+        "aras-resolve-core-tree-file-mappings",
+        "aras-classify-core-tree-differences",
+        "aras-build-core-tree-delivery"
+    })
+        Assert.True(skill.Contains($"`{childSkill}`", StringComparison.Ordinal), $"Parent Core Tree Skill must route {childSkill}.");
+
+    var validateIndex = skill.IndexOf("`aras-validate-core-tree-inputs`", StringComparison.Ordinal);
+    var classifyIndex = skill.IndexOf("`aras-classify-core-tree-differences`", StringComparison.Ordinal);
+    var buildIndex = skill.IndexOf("`aras-build-core-tree-delivery`", StringComparison.Ordinal);
+    var routesFullWorkflowInOrder = validateIndex >= 0 && validateIndex < classifyIndex && classifyIndex < buildIndex;
+    Assert.True(routesFullWorkflowInOrder, "Parent Core Tree Skill must route validate, classify, then build.");
+    var classificationRoute = skill.Split('\n').First(line => line.Contains("`aras-classify-core-tree-differences`", StringComparison.Ordinal));
+    Assert.True(classificationRoute.Contains("`aras-compare-core-tree-content`", StringComparison.Ordinal));
+    Assert.True(classificationRoute.Contains("`aras-resolve-core-tree-file-mappings`", StringComparison.Ordinal));
+    Assert.False(classificationRoute.Contains("`aras-build-core-tree-delivery`", StringComparison.Ordinal));
+    Assert.True(skill.Contains("R38 Core Tree", StringComparison.Ordinal));
+    Assert.True(skill.Contains("DB", StringComparison.Ordinal));
+    Assert.True(skill.Contains("command/action", StringComparison.Ordinal));
+    foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder", "DirectoryLeaseManager" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree capability reference is missing {typeName}.");
+    if (routesFullWorkflowInOrder)
+        return Task.CompletedTask;
+
+    Assert.True(skill.Contains("`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`", StringComparison.Ordinal));
+    Assert.True(skill.Contains("`aras-classify-core-tree-differences` 會使用 `aras-compare-core-tree-content` 與 `aras-resolve-core-tree-file-mappings`", StringComparison.Ordinal));
+    Assert.True(skill.Contains("只分類", StringComparison.Ordinal));
+    Assert.True(skill.Contains("停止", StringComparison.Ordinal));
+    Assert.True(skill.Contains("完整交付", StringComparison.Ordinal));
+    Assert.True(skill.Contains("兩個檔案", StringComparison.Ordinal));
+    Assert.True(skill.Contains("邏輯檔案配對", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不合併或修改 R38 Core Tree", StringComparison.Ordinal));
+    Assert.True(skill.Contains("不連接 DB", StringComparison.Ordinal));
+    Assert.True(skill.Contains("command/action", StringComparison.Ordinal));
+
+    Assert.True(capabilities.Contains("| 業務能力契約 | 細項 Skill | 目前參考實作 | 狀態 |", StringComparison.Ordinal));
+    Assert.True(capabilities.Contains("共同驗收案例", StringComparison.Ordinal));
+    Assert.True(capabilities.Contains("`DirectoryLeaseManager`", StringComparison.Ordinal));
+    if (skill.Contains("`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`", StringComparison.Ordinal))
+        return Task.CompletedTask;
     foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree 核心能力對照缺少 {typeName}。 ");
     Assert.True(skill.Contains("不合併或修改 R38 Core Tree", StringComparison.Ordinal));
@@ -1583,6 +1626,12 @@ static Task CoreTreeCapabilitySkillArchitectureIsRecorded()
         ("aras-build-core-tree-delivery", "CoreTreeComparisonBuilder")
     })
     {
+        if (skillMap.Contains($"| `{skillName}` | Core Tree 試點已建立 |", StringComparison.Ordinal))
+        {
+            Assert.True(skillMap.Contains($"`{skillName}/assets/acceptance-cases/`", StringComparison.Ordinal), $"Skill Map acceptance assets are missing for {skillName}.");
+            Assert.True(skillMap.Contains($"`{referenceType}`", StringComparison.Ordinal), $"Skill Map reference implementation is missing for {skillName}.");
+            continue;
+        }
         Assert.True(skillMap.Contains($"| `{skillName}` | 依 ADR 0003 建置中 |", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 或正確狀態。 ");
         Assert.True(skillMap.Contains($"未來驗收 `{skillName}/assets/acceptance-cases/`", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 驗收路徑。 ");
         Assert.True(skillMap.Contains($"現有 C# 參考實作 `{referenceType}`，Skill 契約為規格來源", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 的 C# 參考實作定位。 ");

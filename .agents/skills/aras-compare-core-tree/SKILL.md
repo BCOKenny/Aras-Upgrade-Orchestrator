@@ -1,59 +1,48 @@
 ---
 name: aras-compare-core-tree
-description: Use when Codex 需要驗證三份 Aras Core Tree 輸入、比較 Client／Server、分類 A／B／C、處理副檔名演進與多候選人工確認，或判斷 Core Tree 比較產出能否標記 Completed；不負責合併或修改 R38 Core Tree。
+description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、只做 A／B／C 分類，或將指定的輸入驗證、兩檔內容比較與邏輯檔案配對請求路由至正確的細項 Skill；不負責合併或修改 R38 Core Tree。
 ---
 
-# 比較及分類 Core Tree
+# 協調 Core Tree 比較
 
-## 目標
+## 角色
 
-協調客戶來源、相同來源版本 OOTB 與 R38 OOTB 三份 Core Tree 的離線比較，建立可追溯的 A／B／C、人工確認清單、摘要及 `Incomplete`／`Completed` 標記。所有驗證、比較、配對、分類及檔案產出都呼叫正式受測核心，不在 Skill 內重建邏輯。
+將案件層級的 Core Tree 工作路由至五個細項 Skill。細項 Skill 的輸入、輸出、比較規則、錯誤代碼及驗收案例是其各自的契約；本 Skill 不重述或取代那些契約。
 
 ## 開始前
 
 1. 讀取根層 `AGENTS.md`、`CONTEXT.md`、相關 ADR、`.scratch/aras-upgrade-orchestrator/spec.md` 第 4、5、6、14、17、18 節。
-2. 完整讀取 `docs/standards/AML_Structure_and_Traversal_Standard.md`、`docs/design/skill-map.md` 與 `references/core-capabilities.md`。Core Tree XML 採規格第 14 節的文字／二進位規則，不使用 Package AML 語意相等。
+2. 完整讀取 `docs/standards/AML_Structure_and_Traversal_Standard.md`、`docs/design/skill-map.md` 與 `references/core-capabilities.md`。Core Tree XML 不使用 Package AML 語意相等。
 3. 使用 `aras-manage-upgrade-case` 核對案件、來源／目標版本、新執行嘗試、輸出目錄、歷程及工作目錄鎖。
-4. 確認操作人員主動提供三份輸入及版本證據；不得從資料夾名稱猜測版本。
+4. 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。
 
-## 固定程序
+## 路由
 
-1. 由 `CoreTreeInputValidator` 驗證客戶與來源 OOTB 版本相同、R38 版本符合案件，且三者都有 `Innovator\Client` 與 `Innovator\Server`。
-2. 固定 Server 文字比較規則集版本與 Checksum；第一版初始規則包含 `Server/method-config.xml`，AI 不得擴張。
-3. 使用 `CoreTreeContentComparer`：Client 指定文字類型只忽略 CRLF／LF 與 UTF BOM；無法解碼及其他檔案採完整串流二進位比較。
-4. 使用 `CoreTreeLogicalPathResolver`，只在相同相對目錄、相同主檔名套用允許的副檔名演進。多候選轉人工確認，不猜測也不跨目錄搜尋。
-5. 使用 `CoreTreeComparisonEngine` 分類：A 為客戶新增、B 為客戶修改且 R38 無對應、C 為客戶修改且 R38 有唯一對應。A 類若碰撞 R38 邏輯檔案也轉人工確認。
-6. 使用 `CoreTreeComparisonBuilder` 在不存在的新嘗試目錄取得租約並建立產出。C 類來源複本改用 R38 檔名但不轉換內容；A／B 保留來源檔名。
-7. 任一錯誤或人工確認存在時只建立 `Incomplete`。修正或人工選擇後建立新執行嘗試重新比較，不覆寫原產出。
+| 使用者請求 | 使用的細項 Skill | 父層處置 |
+|---|---|---|
+| 驗證三份輸入、版本證據、規則或輸出隔離 | `aras-validate-core-tree-inputs` | 在任何讀取、比較或交付前先完成。阻擋時停止。 |
+| 比較兩個檔案的內容 | `aras-compare-core-tree-content` | 直接路由；不延伸為整棵樹分類。 |
+| 解析單一來源檔案的 R38 邏輯對應 | `aras-resolve-core-tree-file-mappings` | 直接路由；不猜測候選。 |
+| 只分類三份已驗證 Core Tree | `aras-classify-core-tree-differences` | 此 Skill 會使用 `aras-compare-core-tree-content` 與 `aras-resolve-core-tree-file-mappings`。取得分類結果後停止，不建立交付目錄。 |
+| 建立完整可交接的比較產出 | `aras-build-core-tree-delivery` | 只在完整交付請求時使用，且必須使用已完成的分類結果。 |
 
-## 快速判定
+## 完整工作流程
 
-| 情況 | 結果 |
-|---|---|
-| 客戶有、來源 OOTB 無、R38 無碰撞 | A |
-| 客戶與來源 OOTB 不同、R38 無對應 | B |
-| 客戶與來源 OOTB 不同、R38 唯一對應 | C |
-| 客戶與來源 OOTB 相同 | 不交付 |
-| 多個 R38 候選或 A 類碰撞 | 人工確認，整體 `Incomplete` |
+完整比較交付固定依序為：`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`。
 
-## 安全責任
+- 使用者明確要求「只分類」時，在 `aras-classify-core-tree-differences` 完成後停止；不得建立交付目錄。
+- 使用者要求兩個檔案的內容比較時，路由至 `aras-compare-core-tree-content`。
+- 使用者要求邏輯檔案配對時，路由至 `aras-resolve-core-tree-file-mappings`。
+- 若輸入驗證、分類或交付回報阻擋、錯誤或人工確認，停止後續程序，保留該 Skill 的結果與下一個安全動作。
 
-- 不合併或修改 R38 Core Tree，也不修改其他兩份輸入。
+## 安全邊界
+
+- 不合併或修改 R38 Core Tree，也不修改任何 Core Tree 輸入。
 - 不得手工建立或改寫 `Completed`、摘要、版本證據、規則 Checksum 或人工確認結果。
-- 不建立分類 D；歧義檔案不複製、不改名、不進正式交付。
-- 不覆寫舊嘗試；輸出不得與任何輸入相同、位於其上下層或造成重疊寫入。
-- 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。使用者明確授權 `K:\70.ArasUpgradeCases\<case-id>` 時，僅可將該案件內的 `core-tree\inputs` 與 evidence 視為唯讀隔離測試資料。
-- 只有正式、受測的 command/action 可在同一案件的新的 `core-tree\attempts` 建立輸出，並由正式案件能力追加 `.orchestrator\history.jsonl`；command/action 缺失時停止，不手工模擬持久化。
-- 不連接 DB、不啟動 Aras 工具、不操作正式 `Support` 或 `Solutions`，也不得讀寫其他 K: 路徑。
-
-## 常見錯誤
-
-- 把 Core Tree XML 交給 Package AML 語意比較。
-- 依修改時間或抽樣判斷二進位檔案相同。
-- 跨目錄搜尋同名檔、從多候選中自動選一個。
-- 將部分輸出改名或補寫成 `Completed`。
-- 將 Core Tree 比較產出誤稱為合併後的 R38 Core Tree。
+- 不建立分類 D；不覆寫舊嘗試；輸出不得與任何輸入重疊。
+- 目前缺少 UI／CLI 及案件 command/action 時，實際客戶案件停止在正式執行介面邊界，不手工模擬持久化。
+- 不連接 DB、不啟動 Aras 工具、不操作正式 `Support`、`Solutions` 或 `K:`。
 
 ## 輸出
 
-回報案件與嘗試識別、三份輸入版本證據、Server 規則版本／Checksum、A／B／C 統計、人工確認、錯誤、輸出目錄、`Incomplete`／`Completed` 狀態、阻擋原因及下一個安全動作。
+回報已使用的細項 Skill、案件與嘗試識別、目前階段結果、阻擋原因（如有）及下一個安全動作。完整交付時再回報交付目錄與 `Incomplete`／`Completed` 狀態。
