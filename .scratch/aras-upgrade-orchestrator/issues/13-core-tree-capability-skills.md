@@ -3,7 +3,7 @@
 Type: task
 Status: claimed
 
-- Hardened validation pending: repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` is superseded because declared classifications could claim `ReadyToComplete` while retaining a review or error. This issue remains claimed until the replacement immutable evidence is recorded.
+- Hardened conformance evidence: `06a95761d8c210efb5a8271793ac36f602274a94`; the Release suite passed 83/83 tests and exercised 33 fixture pairs. It rejects inconsistent declared classifications before output/lease creation. Repaired evidence `d3dbd9524ae9f311bf6b44d53ef18ac0586b6c58` remains superseded; this issue stays claimed.
 
 ## Comments
 
