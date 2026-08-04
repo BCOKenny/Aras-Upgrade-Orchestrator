@@ -4,5 +4,5 @@
   "sourceOotbFiles": { "Client/app.js": { "base64": "c291cmNlLWpz" } },
   "targetOotbFiles": { "Client/app.ts": { "base64": "dGFyZ2V0LXRz" } },
   "outputState": { "attemptExists": false, "attemptId": "delivery-extension-001" },
-  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "fixture-server-rules" }
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
 }

@@ -13,7 +13,8 @@ internal static class CoreTreeCapabilityFixtureTests
         await ForEachCaseAsync("aras-validate-core-tree-inputs", async (caseId, input, expected) =>
         {
             await using var scope = FixtureScope.Create();
-            var request = CreateRequest(scope, input.RootElement, out var evidence);
+            var request = CreateRequest(scope, input.RootElement, out var inputIds);
+            var evidence = new FixtureEvidence(inputIds, request.ServerTextRules.Version, request.ServerTextRules.Checksum);
             object actual;
             try
             {
@@ -47,7 +48,7 @@ internal static class CoreTreeCapabilityFixtureTests
             var rules = RuntimeRules(input.RootElement.GetProperty("serverRules"));
             var relativePath = input.RootElement.GetProperty("relativePath").GetString()!;
             var comparison = await CoreTreeContentComparer.CompareAsync(left, right, relativePath, rules);
-            var evidence = Evidence(input.RootElement.GetProperty("serverRules"), ["left", "right"]);
+            var evidence = new FixtureEvidence(["left", "right"], rules.Version, rules.Checksum);
             var messages = comparison.Mode == CoreTreeContentComparisonMode.BinaryFallback
                 ? new[] { Message("Notice", "TextDecodeFallback", relativePath, new { }) }
                 : [];
@@ -87,7 +88,7 @@ internal static class CoreTreeCapabilityFixtureTests
         await ForEachCaseAsync("aras-classify-core-tree-differences", async (_, input, expected) =>
         {
             await using var scope = FixtureScope.Create();
-            var request = CreateClassificationRequest(scope, input.RootElement, out var evidence);
+            var request = CreateClassificationRequest(scope, input.RootElement, out var inputIds);
             FileStream? unreadableHandle = null;
             try
             {
@@ -98,6 +99,7 @@ internal static class CoreTreeCapabilityFixtureTests
                     unreadableHandle = new FileStream(path, new FileStreamOptions { Mode = FileMode.Open, Access = FileAccess.ReadWrite, Share = FileShare.None });
                 }
                 var result = await CoreTreeComparisonEngine.CompareAsync(request);
+                var evidence = new FixtureEvidence(inputIds, result.ServerRuleVersion, result.ServerRuleChecksum);
                 var messages = result.ManualReviews.Select(review => Message("ManualReview", review.Code, review.SourceRelativePath,
                     review.Code == "CustomerAdditionCollidesWithTarget"
                         ? new { additionDetected = true, candidateTargetRelativePaths = review.TargetCandidates }
@@ -123,7 +125,7 @@ internal static class CoreTreeCapabilityFixtureTests
         await ForEachCaseAsync("aras-build-core-tree-delivery", async (caseId, input, expected) =>
         {
             await using var scope = FixtureScope.Create();
-            var request = CreateClassificationRequest(scope, input.RootElement, out var evidence);
+            var request = CreateClassificationRequest(scope, input.RootElement, out var inputIds, strictFileMaps: true);
             var outputState = input.RootElement.GetProperty("outputState");
             var attemptId = outputState.GetProperty("attemptId").GetString()!;
             request = request with { AttemptId = StableGuid(attemptId), OutputRoot = Path.Combine(scope.Root, "delivery", attemptId) };
@@ -131,26 +133,33 @@ internal static class CoreTreeCapabilityFixtureTests
             {
                 Directory.CreateDirectory(request.OutputRoot);
                 if (outputState.TryGetProperty("existingFiles", out var files))
-                    MaterializeTree(request.OutputRoot, files);
+                    MaterializeStrictTree(request.OutputRoot, files);
             }
+            var inputBefore = SnapshotInputs(request);
+            var outputBefore = SnapshotChecksums(request.OutputRoot);
+            var declared = CreateDeclaredClassification(input.RootElement.GetProperty("classificationResult"), request);
             object actual;
             try
             {
                 var leases = new DirectoryLeaseManager(Path.Combine(scope.Root, "tool-data"));
-                var result = await CoreTreeComparisonBuilder.BuildAsync(request, leases);
+                var result = await CoreTreeComparisonBuilder.BuildFromClassificationAsync(request, declared, leases);
                 var files = SnapshotChecksums(request.OutputRoot)
                     .Where(item => !item.Key.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                     .Select(item => new { relativePath = item.Key, checksum = item.Value }).ToArray();
                 var manifests = Directory.EnumerateFiles(request.OutputRoot, "*-manifest.json", SearchOption.TopDirectoryOnly)
                     .Select(path => Path.GetFileName(path)!).OrderBy(name => name, StringComparer.Ordinal).ToArray();
                 var messages = result.ManualReviews.Select(review => Message("ManualReview", review.Code, review.SourceRelativePath, new { })).ToArray();
+                var resultProjection = DeliveryResult(caseId, attemptId, files, manifests, inputBefore, SnapshotInputs(request));
+                var evidence = new FixtureEvidence(inputIds, result.ServerRuleVersion, result.ServerRuleChecksum);
                 actual = Envelope("aras-build-core-tree-delivery", result.Status.ToString(),
-                    DeliveryResult(expected.RootElement, attemptId, files, manifests), messages, evidence);
+                    resultProjection, messages, evidence);
             }
             catch (CoreTreeValidationException exception) when (exception.Code == "OutputAttemptAlreadyExists")
             {
+                var outputAfter = SnapshotChecksums(request.OutputRoot);
+                var evidence = new FixtureEvidence(inputIds, request.ServerTextRules.Version, request.ServerTextRules.Checksum);
                 actual = Envelope("aras-build-core-tree-delivery", "Incomplete",
-                    new { outputFiles = Array.Empty<object>(), manifestFiles = Array.Empty<string>(), writes = 0 },
+                    new { outputFiles = Array.Empty<object>(), manifestFiles = Array.Empty<string>(), writes = outputBefore.SequenceEqual(outputAfter) ? 0 : 1 },
                     new object[] { Message("Error", exception.Code, string.Empty, new { attemptId }) }, evidence);
             }
             using var actualJson = ToJson(actual);
@@ -185,20 +194,22 @@ internal static class CoreTreeCapabilityFixtureTests
         return JsonDocument.Parse(File.ReadAllText(path));
     }
 
-    private static string MaterializeTree(string workRoot, JsonElement fileMap)
+    private static string MaterializeStrictTree(string workRoot, JsonElement fileMap)
+    {
+        Directory.CreateDirectory(workRoot);
+        foreach (var property in fileMap.EnumerateObject())
+            File.WriteAllBytes(SafePath(workRoot, property.Name), DecodeBytes(property.Value));
+        return workRoot;
+    }
+
+    private static string MaterializeClassificationTree(string workRoot, JsonElement fileMap)
     {
         Directory.CreateDirectory(workRoot);
         foreach (var property in fileMap.EnumerateObject())
         {
-            if (property.Value.ValueKind == JsonValueKind.String)
-            {
-                using var wrapped = JsonDocument.Parse(JsonSerializer.Serialize(new { base64 = property.Value.GetString() }));
-                File.WriteAllBytes(SafePath(workRoot, property.Name), DecodeBytes(wrapped.RootElement));
-            }
-            else
-            {
-                File.WriteAllBytes(SafePath(workRoot, property.Name), DecodeBytes(property.Value));
-            }
+            if (property.Value.ValueKind != JsonValueKind.String)
+                throw new InvalidDataException("Classification fixture file requires a raw base64 string.");
+            File.WriteAllBytes(SafePath(workRoot, property.Name), Convert.FromBase64String(property.Value.GetString()!));
         }
         return workRoot;
     }
@@ -248,21 +259,24 @@ internal static class CoreTreeCapabilityFixtureTests
         }
     }
 
-    private static IReadOnlyDictionary<string, string> SnapshotChecksums(string root) =>
-        Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+    private static IReadOnlyDictionary<string, string> SnapshotChecksums(string root)
+    {
+        if (!Directory.Exists(root)) return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        return Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Select(path => new KeyValuePair<string, string>(NormalizeRelativePath(root, path), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)))))
             .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
+    }
 
-    private static CoreTreeComparisonRequest CreateRequest(FixtureScope scope, JsonElement input, out FixtureEvidence evidence)
+    private static CoreTreeComparisonRequest CreateRequest(FixtureScope scope, JsonElement input, out IReadOnlyList<string> inputIds)
     {
         var customer = MaterializeInput(scope, input.GetProperty("customer"), "customer");
         var source = MaterializeInput(scope, input.GetProperty("sourceOotb"), "source");
         var target = MaterializeInput(scope, input.GetProperty("targetOotb"), "target");
-        evidence = Evidence(input.GetProperty("serverRules"), [
+        inputIds = [
             input.GetProperty("customer").GetProperty("rootId").GetString()!,
             input.GetProperty("sourceOotb").GetProperty("rootId").GetString()!,
-            input.GetProperty("targetOotb").GetProperty("rootId").GetString()!]);
+            input.GetProperty("targetOotb").GetProperty("rootId").GetString()!];
         var output = input.GetProperty("outputRelation").GetString() == "inside-customer-input"
             ? Path.Combine(customer.RootPath, "Innovator", "output")
             : Path.Combine(scope.Root, "output");
@@ -270,31 +284,21 @@ internal static class CoreTreeCapabilityFixtureTests
             customer, source, target, output, RuntimeRules(input.GetProperty("serverRules")), DateTimeOffset.UtcNow);
     }
 
-    private static CoreTreeComparisonRequest CreateClassificationRequest(FixtureScope scope, JsonElement input, out FixtureEvidence evidence)
+    private static CoreTreeComparisonRequest CreateClassificationRequest(FixtureScope scope, JsonElement input, out IReadOnlyList<string> inputIds, bool strictFileMaps = false)
     {
         var customerRoot = Path.Combine(scope.Root, "customer");
         var sourceRoot = Path.Combine(scope.Root, "source");
         var targetRoot = Path.Combine(scope.Root, "target");
-        MaterializeTree(Path.Combine(customerRoot, "Innovator"), input.GetProperty("customerFiles"));
-        MaterializeTree(Path.Combine(sourceRoot, "Innovator"), input.GetProperty("sourceOotbFiles"));
-        MaterializeTree(Path.Combine(targetRoot, "Innovator"), input.GetProperty("targetOotbFiles"));
-        if (input.TryGetProperty("classificationResult", out var declared) &&
-            declared.GetProperty("status").GetString() == "Blocked" &&
-            declared.GetProperty("manualReviews").EnumerateArray().Any(review => review.GetProperty("code").GetString() == "MultipleTargetMappings"))
-        {
-            foreach (var review in declared.GetProperty("manualReviews").EnumerateArray())
-            {
-                var sourcePath = review.GetProperty("relativePath").GetString()!;
-                var targetPath = Path.ChangeExtension(sourcePath, ".tsx").Replace('\\', '/');
-                File.WriteAllBytes(SafePath(Path.Combine(targetRoot, "Innovator"), targetPath), [0]);
-            }
-        }
+        Func<string, JsonElement, string> materialize = strictFileMaps ? MaterializeStrictTree : MaterializeClassificationTree;
+        materialize(Path.Combine(customerRoot, "Innovator"), input.GetProperty("customerFiles"));
+        materialize(Path.Combine(sourceRoot, "Innovator"), input.GetProperty("sourceOotbFiles"));
+        materialize(Path.Combine(targetRoot, "Innovator"), input.GetProperty("targetOotbFiles"));
         foreach (var root in new[] { customerRoot, sourceRoot, targetRoot })
         {
             Directory.CreateDirectory(Path.Combine(root, "Innovator", "Client"));
             Directory.CreateDirectory(Path.Combine(root, "Innovator", "Server"));
         }
-        evidence = Evidence(input.GetProperty("evidence"));
+        inputIds = input.GetProperty("evidence").GetProperty("inputIds").EnumerateArray().Select(item => item.GetString()!).ToArray();
         return new CoreTreeComparisonRequest(Guid.NewGuid(), "12SP9", "R38",
             new(customerRoot, "12SP9", "customer-evidence"), new(sourceRoot, "12SP9", "source-evidence"), new(targetRoot, "R38", "target-evidence"),
             Path.Combine(scope.Root, "output"), CoreTreeServerTextRuleSet.Create("server-text/1", ["Server/method-config.xml"]), DateTimeOffset.UtcNow);
@@ -340,19 +344,49 @@ internal static class CoreTreeCapabilityFixtureTests
 
     private static object Message(string kind, string code, string relativePath, object details) => new { kind, code, relativePath, details };
 
-    private static IReadOnlyDictionary<string, object> DeliveryResult(JsonElement expected, string attemptId, IEnumerable<object> files, string[] manifests)
+    private static IReadOnlyDictionary<string, object> DeliveryResult(
+        string caseId,
+        string attemptId,
+        IEnumerable<object> files,
+        string[] manifests,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> inputBefore,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> inputAfter)
     {
-        var required = expected.GetProperty("result");
         var result = new Dictionary<string, object>
         {
             ["outputFiles"] = files,
             ["manifestFiles"] = manifests
         };
-        if (required.TryGetProperty("attemptId", out _)) result["attemptId"] = attemptId;
-        if (required.TryGetProperty("inputChecksumsUnchanged", out _)) result["inputChecksumsUnchanged"] = true;
-        if (required.TryGetProperty("inputBytesUnchanged", out _)) result["inputBytesUnchanged"] = true;
+        if (caseId == "new-attempt") result["attemptId"] = attemptId;
+        if (caseId == "input-immutable") result["inputChecksumsUnchanged"] = SnapshotsEqual(inputBefore, inputAfter);
+        if (caseId == "c-target-extension") result["inputBytesUnchanged"] = SnapshotsEqual(inputBefore, inputAfter);
         return result;
     }
+
+    private static CoreTreeComparisonResult CreateDeclaredClassification(JsonElement declared, CoreTreeComparisonRequest request)
+    {
+        var items = declared.GetProperty("items").EnumerateArray().Select(item => new CoreTreeClassifiedItem(
+            Enum.Parse<CoreTreeClassification>(item.GetProperty("classification").GetString()!, ignoreCase: false),
+            item.GetProperty("sourceRelativePath").GetString()!,
+            item.TryGetProperty("targetRelativePath", out var target) && target.ValueKind != JsonValueKind.Null ? target.GetString() : null)).ToArray();
+        var reviews = declared.GetProperty("manualReviews").EnumerateArray().Select(review => new CoreTreeManualReview(
+            review.GetProperty("relativePath").GetString()!, review.GetProperty("code").GetString()!, null, [], "Declared fixture review.")).ToArray();
+        var errors = declared.GetProperty("errors").EnumerateArray().Select(error => new CoreTreeComparisonError(
+            error.GetProperty("relativePath").GetString()!, error.GetProperty("code").GetString()!, "Declared fixture error.")).ToArray();
+        return new(request.AttemptId, Enum.Parse<CoreTreeComparisonStatus>(declared.GetProperty("status").GetString()!, ignoreCase: false),
+            items, reviews, errors, [], request.OutputRoot, request.ServerTextRules.Version, request.ServerTextRules.Checksum, request.StartedAt, DateTimeOffset.UtcNow);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> SnapshotInputs(CoreTreeComparisonRequest request) =>
+        new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal)
+        {
+            ["customer"] = SnapshotChecksums(Path.Combine(request.Customer.RootPath, "Innovator")),
+            ["sourceOotb"] = SnapshotChecksums(Path.Combine(request.SourceOotb.RootPath, "Innovator")),
+            ["targetOotb"] = SnapshotChecksums(Path.Combine(request.TargetOotb.RootPath, "Innovator"))
+        };
+
+    private static bool SnapshotsEqual(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> before, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> after) =>
+        before.Count == after.Count && before.All(pair => after.TryGetValue(pair.Key, out var later) && pair.Value.SequenceEqual(later));
 
     private static JsonDocument ToJson(object value) => JsonDocument.Parse(JsonSerializer.Serialize(value));
     private static FixtureEvidence Evidence(JsonElement element, IReadOnlyList<string>? inputIds = null)

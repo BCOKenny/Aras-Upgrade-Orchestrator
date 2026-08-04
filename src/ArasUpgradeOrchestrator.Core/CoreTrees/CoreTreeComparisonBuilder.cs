@@ -15,46 +15,79 @@ public static class CoreTreeComparisonBuilder
     {
         ArgumentNullException.ThrowIfNull(leaseManager);
         CoreTreeInputValidator.Validate(request);
+        var classification = await CoreTreeComparisonEngine.CompareAsync(request, clock, cancellationToken);
+        ValidateClassification(request, classification);
+        return await WriteDeliveryAsync(request, classification, leaseManager, clock, cancellationToken);
+    }
+
+    public static async Task<CoreTreeComparisonResult> BuildFromClassificationAsync(
+        CoreTreeComparisonRequest request,
+        CoreTreeComparisonResult classification,
+        DirectoryLeaseManager leaseManager,
+        Func<DateTimeOffset>? clock = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(leaseManager);
+        ArgumentNullException.ThrowIfNull(classification);
+        CoreTreeInputValidator.Validate(request);
+        ValidateClassification(request, classification);
+        return await WriteDeliveryAsync(request, classification, leaseManager, clock, cancellationToken);
+    }
+
+    private static void ValidateClassification(CoreTreeComparisonRequest request, CoreTreeComparisonResult classification)
+    {
+        if (classification.AttemptId != request.AttemptId ||
+            !string.Equals(Path.GetFullPath(classification.OutputRoot), Path.GetFullPath(request.OutputRoot), StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(classification.ServerRuleVersion, request.ServerTextRules.Version, StringComparison.Ordinal) ||
+            !string.Equals(classification.ServerRuleChecksum, request.ServerTextRules.Checksum, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("The declared Core Tree classification does not match the delivery request.");
+    }
+
+    private static async Task<CoreTreeComparisonResult> WriteDeliveryAsync(
+        CoreTreeComparisonRequest request,
+        CoreTreeComparisonResult classification,
+        DirectoryLeaseManager leaseManager,
+        Func<DateTimeOffset>? clock,
+        CancellationToken cancellationToken)
+    {
         await using var lease = await leaseManager.AcquireAsync([request.OutputRoot], cancellationToken);
         Directory.CreateDirectory(request.OutputRoot);
         try
         {
-            var comparison = await CoreTreeComparisonEngine.CompareAsync(request, clock, cancellationToken);
-
-            if (comparison.Status == CoreTreeComparisonStatus.ReadyToComplete)
-                await CopyClassifiedItemsAsync(request, comparison.Items, cancellationToken);
+            if (classification.Status == CoreTreeComparisonStatus.ReadyToComplete)
+                await CopyClassifiedItemsAsync(request, classification.Items, cancellationToken);
 
             await WriteJsonAsync(Path.Combine(request.OutputRoot, "processing-summary.json"), new
             {
-                comparison.AttemptId,
+                classification.AttemptId,
                 SourceVersion = request.SourceVersion,
                 TargetVersion = request.TargetVersion,
                 Customer = request.Customer,
                 SourceOotb = request.SourceOotb,
                 TargetOotb = request.TargetOotb,
                 ServerTextRules = new { request.ServerTextRules.Version, request.ServerTextRules.Checksum },
-                comparison.StartedAt,
-                comparison.FinishedAt,
+                classification.StartedAt,
+                classification.FinishedAt,
                 Counts = new
                 {
-                    A = comparison.Items.Count(item => item.Classification == CoreTreeClassification.A),
-                    B = comparison.Items.Count(item => item.Classification == CoreTreeClassification.B),
-                    C = comparison.Items.Count(item => item.Classification == CoreTreeClassification.C),
-                    ManualReview = comparison.ManualReviews.Count,
-                    Errors = comparison.Errors.Count,
-                    Notices = comparison.Notices.Count
+                    A = classification.Items.Count(item => item.Classification == CoreTreeClassification.A),
+                    B = classification.Items.Count(item => item.Classification == CoreTreeClassification.B),
+                    C = classification.Items.Count(item => item.Classification == CoreTreeClassification.C),
+                    ManualReview = classification.ManualReviews.Count,
+                    Errors = classification.Errors.Count,
+                    Notices = classification.Notices.Count
                 }
             }, cancellationToken);
 
-            if (comparison.ManualReviews.Count > 0)
-                await WriteJsonAsync(Path.Combine(request.OutputRoot, "manual-reviews.json"), comparison.ManualReviews, cancellationToken);
-            if (comparison.Errors.Count > 0)
-                await WriteJsonAsync(Path.Combine(request.OutputRoot, "errors.json"), comparison.Errors, cancellationToken);
-            if (comparison.Notices.Count > 0)
-                await WriteJsonAsync(Path.Combine(request.OutputRoot, "notices.json"), comparison.Notices, cancellationToken);
+            if (classification.ManualReviews.Count > 0)
+                await WriteJsonAsync(Path.Combine(request.OutputRoot, "manual-reviews.json"), classification.ManualReviews, cancellationToken);
+            if (classification.Errors.Count > 0)
+                await WriteJsonAsync(Path.Combine(request.OutputRoot, "errors.json"), classification.Errors, cancellationToken);
+            if (classification.Notices.Count > 0)
+                await WriteJsonAsync(Path.Combine(request.OutputRoot, "notices.json"), classification.Notices, cancellationToken);
 
-            var completed = comparison.Status == CoreTreeComparisonStatus.ReadyToComplete;
-            var final = comparison with { Status = completed ? CoreTreeComparisonStatus.Completed : CoreTreeComparisonStatus.Incomplete };
+            var completed = classification.Status == CoreTreeComparisonStatus.ReadyToComplete;
+            var final = classification with { Status = completed ? CoreTreeComparisonStatus.Completed : CoreTreeComparisonStatus.Incomplete };
             var markerName = completed ? "completion-manifest.json" : "incomplete-manifest.json";
             await WriteJsonAsync(Path.Combine(request.OutputRoot, markerName), new
             {
@@ -112,12 +145,7 @@ public static class CoreTreeComparisonBuilder
         }
     }
 
-    private static async Task CopyAsync(
-        string inputRoot,
-        string inputRelative,
-        string outputRoot,
-        string outputRelative,
-        CancellationToken cancellationToken)
+    private static async Task CopyAsync(string inputRoot, string inputRelative, string outputRoot, string outputRelative, CancellationToken cancellationToken)
     {
         var source = CoreTreeLogicalPathResolver.ToFullPath(inputRoot, inputRelative);
         var destination = CoreTreeLogicalPathResolver.ToFullPath(outputRoot, outputRelative);

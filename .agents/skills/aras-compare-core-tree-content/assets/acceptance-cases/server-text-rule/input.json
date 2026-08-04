@@ -4,5 +4,5 @@
   "relativePath": "Server/method-config.xml",
   "left": { "base64": "a2V5PXZhbHVlDQo=" },
   "right": { "base64": "a2V5PXZhbHVlCg==" },
-  "serverRules": { "version": "server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "fixture-server-rules" }
+  "serverRules": { "version": "server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
 }

@@ -4,5 +4,5 @@
   "status": "Blocked",
   "result": { "items": [{ "classification": "B", "sourceRelativePath": "Server/removed.bin", "targetRelativePath": null }] },
   "messages": [{ "kind": "Error", "code": "FileReadError", "relativePath": "Client/unreadable.js", "details": { "reason": "fixture unreadable customer file" } }],
-  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "fixture-server-rules" }
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
 }

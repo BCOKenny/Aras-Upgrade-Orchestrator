@@ -76,6 +76,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 多候選與 A 類碰撞保持人工確認", CoreTreeAmbiguityBlocksClassification)
     ,("Core Tree builder 建立新嘗試產出且保持三份輸入不變", CoreTreeBuilderProducesCompletedOutput)
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
+    ,("Core Tree 交付必須使用已宣告的阻擋分類且不得重新分類", CoreTreeBuilderUsesDeclaredClassification)
     ,("Core Tree 驗證與比較使用穩定錯誤代碼", CoreTreeStableContractCodes)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
@@ -1569,6 +1570,31 @@ static async Task CoreTreeBuilderBlocksIncompleteAndOverwrite()
     Assert.False(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
     Assert.False(Directory.Exists(Path.Combine(request.OutputRoot, "C")));
     await Assert.ThrowsAsync<InvalidOperationException>(() => CoreTreeComparisonBuilder.BuildAsync(request, leases));
+}
+
+static async Task CoreTreeBuilderUsesDeclaredClassification()
+{
+    await using var scope = TestScope.Create();
+    var request = CreateCoreTreeRequest(scope.Root);
+    var customer = Path.Combine(request.Customer.RootPath, "Innovator");
+    var source = Path.Combine(request.SourceOotb.RootPath, "Innovator");
+    var target = Path.Combine(request.TargetOotb.RootPath, "Innovator");
+    await WriteCoreTreeFile(customer, "Client/app.js", "customer");
+    await WriteCoreTreeFile(source, "Client/app.js", "source");
+    await WriteCoreTreeFile(target, "Client/app.ts", "target");
+    var declared = new CoreTreeComparisonResult(
+        request.AttemptId,
+        CoreTreeComparisonStatus.Blocked,
+        [],
+        [new CoreTreeManualReview("Client/app.js", "MultipleTargetMappings", ".js → .ts|.tsx", ["Client/app.ts"], "Declared review blocks delivery.")],
+        [], [], request.OutputRoot, request.ServerTextRules.Version, request.ServerTextRules.Checksum, request.StartedAt, DateTimeOffset.UtcNow);
+
+    var result = await CoreTreeComparisonBuilder.BuildFromClassificationAsync(request, declared, new DirectoryLeaseManager(scope.ToolDataRoot));
+
+    Assert.Equal(CoreTreeComparisonStatus.Incomplete, result.Status);
+    Assert.True(File.Exists(Path.Combine(request.OutputRoot, "incomplete-manifest.json")));
+    Assert.False(Directory.Exists(Path.Combine(request.OutputRoot, "C")));
+    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
 }
 
 static async Task WriteCoreTreeFile(string innovatorRoot, string relativePath, string content)
