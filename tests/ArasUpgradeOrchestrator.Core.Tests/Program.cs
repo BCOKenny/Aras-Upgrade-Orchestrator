@@ -21,7 +21,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("受控執行保存確認、快照與結果", ControlledExecutionRecordsOutcome),
     ("執行快照與動作不一致時阻擋", SnapshotMismatchIsBlocked),
     ("預設外部執行器不執行正式操作", DefaultExecutorBlocksExternalAction),
-    ("Skill Map 包含主入口與八個無重疊功能", SkillMapDefinesAllRoutes),
+    ("Skill Map 包含主入口與獨立功能", SkillMapDefinesAllRoutes),
     ("主 Skill 路由未實作功能時明確停止", MainSkillStopsAtUnavailableRoute),
     ("案件管理 Skill 引用正式核心並守住責任邊界", CaseSkillReferencesTestedCore)
     ,("一次性 Package 流程首次 DB 變更前鎖定且不可重開", CustomerPackageFlowLocksOnce)
@@ -77,6 +77,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree builder 建立新嘗試產出且保持三份輸入不變", CoreTreeBuilderProducesCompletedOutput)
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
+    ,("Core Tree execution Skill contract", CoreTreeRunSkillReferencesExecutionBoundary)
 };
 
 var failures = new List<string>();
@@ -328,6 +329,7 @@ static Task SkillMapDefinesAllRoutes()
         "aras-prepare-adapted-package",
         "aras-manage-upgrade-rules",
         "aras-compare-core-tree",
+        "aras-run-core-tree-comparison",
         "aras-coordinate-upgrade-hop",
         "aras-assemble-upgrade-delivery"
     };
@@ -1549,6 +1551,37 @@ static Task CoreTreeSkillReferencesTestedCore()
     Assert.True(skill.Contains("多候選", StringComparison.Ordinal));
     Assert.True(skill.Contains("不得手工建立或改寫 `Completed`", StringComparison.Ordinal));
     Assert.True(skill.Contains("未取得實際客戶目錄授權", StringComparison.Ordinal));
+    return Task.CompletedTask;
+}
+
+static Task CoreTreeRunSkillReferencesExecutionBoundary()
+{
+    var skillRoot = ProjectPath(".agents", "skills", "aras-run-core-tree-comparison");
+    var skillPath = Path.Combine(skillRoot, "SKILL.md");
+    var capabilitiesPath = Path.Combine(skillRoot, "references", "core-capabilities.md");
+    var metadataPath = Path.Combine(skillRoot, "agents", "openai.yaml");
+    Assert.True(File.Exists(skillPath), "Run Core Tree Skill 尚未建立。");
+    Assert.True(File.Exists(capabilitiesPath), "Run Core Tree Skill capability reference 尚未建立。");
+    Assert.True(File.Exists(metadataPath), "Run Core Tree Skill metadata 尚未建立。");
+    var skill = File.ReadAllText(skillPath);
+    var capabilities = File.ReadAllText(capabilitiesPath);
+    AssertSkillFrontmatter(skill, "aras-run-core-tree-comparison");
+    AssertAgentMetadata(metadataPath, "aras-run-core-tree-comparison");
+    foreach (var required in new[]
+    {
+        "CoreTreeComparisonCommand",
+        "正式 command/action",
+        "不可覆寫",
+        "執行快照",
+        "新的執行嘗試",
+        "DirectoryLeaseManager",
+        "history.jsonl",
+        "不得自動產生"
+    })
+        Assert.True(skill.Contains(required, StringComparison.Ordinal), $"Run Core Tree Skill 缺少必要契約：{required}");
+    foreach (var typeName in new[] { "CaseStore", "ExecutionSnapshot", "AppendOnlyHistoryStore", "SafetyPolicy", "DirectoryLeaseManager", "CoreTreeComparisonBuilder" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Run Core Tree capability 缺少 {typeName}。");
+    Assert.True(capabilities.Contains("尚未建立", StringComparison.Ordinal), "Capability reference 必須揭露正式 command/action 尚未建立。");
     return Task.CompletedTask;
 }
 

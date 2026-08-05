@@ -1,0 +1,4 @@
+interface:
+  display_name: "執行 Core Tree 比較"
+  short_description: "依案件關卡建立並追蹤 Core Tree 比較嘗試"
+  default_prompt: "使用 $aras-run-core-tree-comparison 執行指定案件的 Core Tree 比較前置檢查與受控嘗試。"
