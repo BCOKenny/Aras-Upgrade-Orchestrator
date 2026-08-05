@@ -10,7 +10,7 @@ Blocked by: 12
 
 ## Answer
 
-Skill、能力映射與 metadata 已建立，契約測試通過。正式 `CoreTreeComparisonCommand`/CLI/UI 尚未建立，因此 Skill 在正式入口缺失時固定回傳 `Blocked`，不得自動產生程式或操作外部環境。
+Skill、能力映射與 metadata 已建立，正式 `CoreTreeComparisonCommand` 與離線測試 CLI 已建立，契約測試通過。UI、DB、Aras Export、登入與升級工具仍未接入；安全或版本不符時 command 回傳 `Blocked`，Skill 不得自動產生程式或操作外部環境。
 
 ## Comments
 

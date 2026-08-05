@@ -78,6 +78,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree execution Skill contract", CoreTreeRunSkillReferencesExecutionBoundary)
+    ,("Core Tree command 協調案件、快照、鎖、Builder 與歷程", CoreTreeCommandCoordinatesCase)
+    ,("Core Tree command 未通過 SafetyPolicy 時阻擋且不建立嘗試", CoreTreeCommandBlocksUnsafeAction)
+    ,("Core Tree 測試 CLI 暴露固定 command JSON 入口", CoreTreeTestCliContract)
 };
 
 var failures = new List<string>();
@@ -1581,7 +1584,79 @@ static Task CoreTreeRunSkillReferencesExecutionBoundary()
         Assert.True(skill.Contains(required, StringComparison.Ordinal), $"Run Core Tree Skill 缺少必要契約：{required}");
     foreach (var typeName in new[] { "CaseStore", "ExecutionSnapshot", "AppendOnlyHistoryStore", "SafetyPolicy", "DirectoryLeaseManager", "CoreTreeComparisonBuilder" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Run Core Tree capability 缺少 {typeName}。");
-    Assert.True(capabilities.Contains("尚未建立", StringComparison.Ordinal), "Capability reference 必須揭露正式 command/action 尚未建立。");
+    Assert.True(capabilities.Contains("Established command/action", StringComparison.Ordinal), "Capability reference 必須揭露正式 command/action 已建立。");
+    return Task.CompletedTask;
+}
+
+static async Task CoreTreeCommandCoordinatesCase()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    var caseStore = new CaseStore(scope.CaseRoot);
+    await caseStore.CreateAsync(manifest);
+    var request = CreateCoreTreeRequest(scope.Root);
+    request = request with { OutputRoot = Path.Combine(scope.CaseRoot, "core-tree-output") };
+    await WriteCoreTreeFile(Path.Combine(request.Customer.RootPath, "Innovator"), "Client/new.js", "new");
+    await WriteCoreTreeFile(Path.Combine(request.SourceOotb.RootPath, "Innovator"), "Client/new.js", "old");
+    var policy = new SafetyPolicy([
+        new SafetyWhitelistEntry("core-tree.compare", "1", [scope.CaseRoot], new HashSet<string>(StringComparer.Ordinal) { "case.loaded", "inputs.valid" })]);
+    var command = new CoreTreeComparisonCommand(policy, () => DateTimeOffset.Parse("2026-08-05T00:00:00Z"));
+    var result = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot,
+        "operator",
+        request.Customer,
+        request.SourceOotb,
+        request.TargetOotb,
+        request.OutputRoot,
+        request.ServerTextRules));
+
+    Assert.Equal(manifest.CaseId, result.CaseId);
+    Assert.Equal(CoreTreeComparisonStatus.Completed, result.Status);
+    Assert.NotEqual(Guid.Empty, result.AttemptId);
+    Assert.True(!string.IsNullOrWhiteSpace(result.SnapshotDigest));
+    Assert.True(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(2, history.Count);
+    Assert.Equal(HistoryEventTypes.AttemptStarted, history[0].EventType);
+    Assert.Equal(HistoryEventTypes.AttemptSucceeded, history[1].EventType);
+}
+
+static async Task CoreTreeCommandBlocksUnsafeAction()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var request = CreateCoreTreeRequest(scope.Root);
+    request = request with { OutputRoot = Path.Combine(scope.CaseRoot, "core-tree-output") };
+    var command = new CoreTreeComparisonCommand(new SafetyPolicy([]));
+    var result = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot,
+        "operator",
+        request.Customer,
+        request.SourceOotb,
+        request.TargetOotb,
+        request.OutputRoot,
+        request.ServerTextRules));
+
+    Assert.Equal(CoreTreeComparisonCommandStatus.Blocked, result.CommandStatus);
+    Assert.Equal(SafetyLevel.SingleConfirmation, result.SafetyLevel);
+    Assert.Equal(Guid.Empty, result.AttemptId);
+    Assert.False(Directory.Exists(request.OutputRoot));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(1, history.Count);
+    Assert.Equal(HistoryEventTypes.ActionBlocked, history[0].EventType);
+}
+
+static Task CoreTreeTestCliContract()
+{
+    var cliRoot = ProjectPath("tools", "ArasUpgradeOrchestrator.CoreTree.Cli");
+    Assert.True(File.Exists(Path.Combine(cliRoot, "ArasUpgradeOrchestrator.CoreTree.Cli.csproj")));
+    var program = File.ReadAllText(Path.Combine(cliRoot, "Program.cs"));
+    Assert.True(program.Contains("CoreTreeComparisonCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("--request", StringComparison.Ordinal));
+    Assert.True(program.Contains("JsonSerializer", StringComparison.Ordinal));
     return Task.CompletedTask;
 }
 

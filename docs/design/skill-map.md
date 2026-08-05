@@ -76,4 +76,4 @@ flowchart TD
 - 整合驗收：以主 Skill 路由情境及每個功能 Skill 的成功、錯誤、證據不足、未授權與中斷情境分別驗證。
 ### 5B Core Tree execution boundary
 
-`aras-run-core-tree-comparison` is an independent execution-coordination Skill. It owns the case-bound snapshot, attempt, safety lease, append-only history, and fixed result contract, while `aras-compare-core-tree` owns comparison and classification. The formal `CoreTreeComparisonCommand`/CLI/UI is not yet established; until it is, the execution Skill must return `Blocked` and must not generate code or access external environments.
+`aras-run-core-tree-comparison` is an independent execution-coordination Skill. It owns the case-bound workflow contract, while `CoreTreeComparisonCommand` owns the actual snapshot, attempt, SafetyPolicy, command lease, Builder call, append-only history, and fixed result. `CoreTreeComparisonCommand` and the offline test CLI are established; UI and external Aras/DB adapters remain isolated, and unsafe or mismatched requests return `Blocked`.

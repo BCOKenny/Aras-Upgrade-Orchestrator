@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArasUpgradeOrchestrator.Cor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArasUpgradeOrchestrator.Core.Tests", "tests\ArasUpgradeOrchestrator.Core.Tests\ArasUpgradeOrchestrator.Core.Tests.csproj", "{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArasUpgradeOrchestrator.CoreTree.Cli", "tools\ArasUpgradeOrchestrator.CoreTree.Cli\ArasUpgradeOrchestrator.CoreTree.Cli.csproj", "{B9B05D18-BD6B-4C35-AE6A-AD0D9D0F9B9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,5 +22,9 @@ Global
 		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FA9C2059-FC95-49F1-8E6E-37A25027C2BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9B05D18-BD6B-4C35-AE6A-AD0D9D0F9B9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9B05D18-BD6B-4C35-AE6A-AD0D9D0F9B9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9B05D18-BD6B-4C35-AE6A-AD0D9D0F9B9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9B05D18-BD6B-4C35-AE6A-AD0D9D0F9B9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

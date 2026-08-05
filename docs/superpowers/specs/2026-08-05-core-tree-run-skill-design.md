@@ -10,4 +10,4 @@ The Skill coordinates the eight fixed steps: case/settings load, identity/versio
 
 ## Contract
 
-The formal command is the only entry point allowed to bind a case snapshot to `CoreTreeComparisonBuilder`. Core-only tests remain offline fixtures and are not customer-case evidence. A completed result requires the existing Core Tree completion rules and evidence; manual review produces `Incomplete` or `Blocked`.
+The formal `CoreTreeComparisonCommand` is the only entry point allowed to bind a case snapshot to `CoreTreeComparisonBuilder`; the offline CLI is its test adapter. Core-only tests and CLI runs remain offline fixtures and are not customer-case evidence. A completed result requires the existing Core Tree completion rules and evidence; manual review produces `Incomplete` or `Blocked`.

@@ -26,7 +26,7 @@ Before any attempt, read `AGENTS.md`, `CONTEXT.md`, the relevant ADRs, `.scratch
 
 ## Current boundary
 
-This repository currently has no formal `CoreTreeComparisonCommand`, CLI, UI, or command/action registration. Therefore a real case execution must stop at step 6 with `Blocked`; this Skill does not auto-create the missing command, log entries, snapshots, or output directories. The existing .NET core tests may invoke core types with isolated fixtures, but that is not Skill execution and is not evidence for a customer case.
+The formal `CoreTreeComparisonCommand` and offline test CLI now exist. The command performs the case load, evidence/version validation, immutable snapshot, SafetyPolicy decision, command lease, attempt lifecycle, Builder call, append-only history, and fixed result model. The CLI is deliberately offline: real customer, DB, Aras Export, login, upgrade-tool, UI, and external adapters remain unavailable. If the command/action is absent or the command receives an unsafe or mismatched request, it must return `Blocked`; the Skill never generates the missing implementation at runtime.
 
 ## Stop conditions
 
