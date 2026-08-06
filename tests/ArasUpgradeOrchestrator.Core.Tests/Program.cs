@@ -1946,7 +1946,9 @@ static async Task CoreTreeCliPreflightRejectsMalformedRequest()
     var result = await RunCoreTreeCliAsync("--preflight", requestPath);
 
     Assert.Equal(1, result.ExitCode);
-    Assert.Equal("Request is invalid.", result.StandardError.Trim());
+    using var document = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal("CliInputError", document.RootElement.GetProperty("code").GetString());
+    Assert.True(!string.IsNullOrWhiteSpace(document.RootElement.GetProperty("message").GetString()));
 }
 
 static async Task CoreTreeCliRequestUsagePreservesLegacyExitCode()
@@ -1954,6 +1956,8 @@ static async Task CoreTreeCliRequestUsagePreservesLegacyExitCode()
     var result = await RunCoreTreeCliAsync("--request");
 
     Assert.Equal(2, result.ExitCode);
+    using var document = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal("CliArgumentError", document.RootElement.GetProperty("code").GetString());
 }
 
 static async Task<string> WriteCliRequestAsync(CoreTreeComparisonPreflightRequest request, string requestPath)
