@@ -1,0 +1,8 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-resolve-core-tree-file-mappings",
+  "status": "Resolved",
+  "result": { "mapping": "None", "candidates": [], "appliedEvolution": null },
+  "messages": [],
+  "evidence": { "inputIds": ["source-file", "target-ootb-r38"], "ruleVersion": "extension-evolution/1", "ruleChecksum": "fixture-extension-evolution" }
+}

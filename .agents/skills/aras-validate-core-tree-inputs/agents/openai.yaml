@@ -1,0 +1,4 @@
+interface:
+  display_name: "驗證 Core Tree 比較輸入"
+  short_description: "驗證三份 Core Tree、版本證據及安全隔離"
+  default_prompt: "使用 $aras-validate-core-tree-inputs 驗證三份 Aras Core Tree 是否可開始比較。"

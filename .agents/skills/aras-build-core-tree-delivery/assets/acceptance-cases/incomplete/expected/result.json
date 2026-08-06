@@ -1,0 +1,8 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-build-core-tree-delivery",
+  "status": "Incomplete",
+  "result": { "outputFiles": [], "manifestFiles": ["incomplete-manifest.json"] },
+  "messages": [{ "kind": "ManualReview", "code": "MultipleTargetMappings", "relativePath": "Client/app.js", "details": {} }],
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

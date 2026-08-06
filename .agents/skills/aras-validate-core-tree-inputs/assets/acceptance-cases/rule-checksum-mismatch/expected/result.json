@@ -1,0 +1,8 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-validate-core-tree-inputs",
+  "status": "Blocked",
+  "result": { "validatedInputs": [] },
+  "messages": [{ "kind": "Error", "code": "RuleChecksumMismatch", "relativePath": "Server/method-config.xml", "details": {} }],
+  "evidence": { "inputIds": ["customer-12sp9", "ootb-12sp9", "ootb-r38"], "ruleVersion": "r38-server-text/1", "ruleChecksum": "BAD" }
+}

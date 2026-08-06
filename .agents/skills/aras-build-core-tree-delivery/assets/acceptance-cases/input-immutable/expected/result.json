@@ -1,0 +1,15 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-build-core-tree-delivery",
+  "status": "Completed",
+  "result": {
+    "outputFiles": [
+      { "relativePath": "B/CustomerSource/Server/method-config.xml", "checksum": "B6C45863875E34487CA3C155ED145EFE12A74581E27BEFEC5AA661B8EE8CA6DD" },
+      { "relativePath": "B/OOTBSource/Server/method-config.xml", "checksum": "41CF6794BA4200B839C53531555F0F3998DF4CBB01A4D5CB0B94E3CA5E23947D" }
+    ],
+    "manifestFiles": ["completion-manifest.json"],
+    "inputChecksumsUnchanged": true
+  },
+  "messages": [],
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

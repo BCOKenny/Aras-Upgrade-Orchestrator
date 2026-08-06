@@ -1,0 +1,17 @@
+{
+  "classificationResult": {
+    "status": "ReadyToComplete",
+    "items": [
+      { "classification": "A", "sourceRelativePath": "Client/add.js" },
+      { "classification": "B", "sourceRelativePath": "Client/legacy.js" },
+      { "classification": "C", "sourceRelativePath": "Client/page.js", "targetRelativePath": "Client/page.ts" }
+    ],
+    "manualReviews": [],
+    "errors": []
+  },
+  "customerFiles": { "Client/add.js": { "base64": "YWRk" }, "Client/legacy.js": { "base64": "Y3VzdG9tZXI=" }, "Client/page.js": { "base64": "Y3VzdG9tLWpz" } },
+  "sourceOotbFiles": { "Client/legacy.js": { "base64": "c291cmNl" }, "Client/page.js": { "base64": "c291cmNlLWpz" } },
+  "targetOotbFiles": { "Client/page.ts": { "base64": "dGFyZ2V0LXRz" } },
+  "outputState": { "attemptExists": false, "attemptId": "delivery-categories-001" },
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

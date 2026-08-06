@@ -1,0 +1,11 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-validate-core-tree-inputs",
+  "sourceVersion": "12SP9",
+  "targetVersion": "R38",
+  "customer": { "rootId": "customer-12sp9", "innovatorVersion": "12SP9", "evidenceReference": "evidence/customer-version.txt", "hasClient": true, "hasServer": true },
+  "sourceOotb": { "rootId": "ootb-12sp9", "innovatorVersion": "12SP9", "evidenceReference": "evidence/ootb-12sp9-version.txt", "hasClient": true, "hasServer": true },
+  "targetOotb": { "rootId": "ootb-r38", "innovatorVersion": "R38", "evidenceReference": "evidence/ootb-r38-version.txt", "hasClient": true, "hasServer": false },
+  "outputRelation": "separate-new-attempt",
+  "serverRules": { "version": "r38-server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "447FB7778893E56462299AED6A554307D4182A45F9B934B1287F3C9224F57AA7", "checksumValid": true }
+}

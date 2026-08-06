@@ -1,0 +1,4 @@
+interface:
+  display_name: "分類 Core Tree 差異"
+  short_description: "使用三方比較結果建立 A／B／C 與人工確認"
+  default_prompt: "使用 $aras-classify-core-tree-differences 只分類三份 Core Tree，不建立交付目錄。"

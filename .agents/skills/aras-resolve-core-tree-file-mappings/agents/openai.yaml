@@ -1,0 +1,4 @@
+interface:
+  display_name: "解析 Core Tree 邏輯檔案配對"
+  short_description: "解析跨版本檔名及副檔名演進的唯一對應與人工確認流程"
+  default_prompt: "使用 $aras-resolve-core-tree-file-mappings 找出舊版檔案在目標 Core Tree 中的邏輯對應。"

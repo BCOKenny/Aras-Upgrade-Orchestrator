@@ -1,0 +1,8 @@
+{
+  "classificationResult": { "status": "ReadyToComplete", "items": [{ "classification": "B", "sourceRelativePath": "Server/method-config.xml" }], "manualReviews": [], "errors": [] },
+  "customerFiles": { "Server/method-config.xml": { "base64": "Y3VzdG9tZXI=" } },
+  "sourceOotbFiles": { "Server/method-config.xml": { "base64": "c291cmNl" } },
+  "targetOotbFiles": {},
+  "outputState": { "attemptExists": false, "attemptId": "delivery-immutable-001" },
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

@@ -38,7 +38,7 @@ The formal `CoreTreeComparisonCommand` and offline test CLI now exist. The comma
 
 ## Security rules
 
-- Never access a real customer, `K:` drive, DB, Aras Export, login session, or upgrade tool from this Skill.
+- Never access a real customer, DB, Aras Export, login session, upgrade tool, or any path outside an explicitly authorized `K:\70.ArasUpgradeCases\<case-id>` isolated case. Within that case, inputs and evidence are read-only; only `CoreTreeComparisonCommand` may create a new attempt output and append history.
 - Never change R38 Core Tree files, merge customer content, or mark `Completed` by judgment.
 - Never overwrite inputs, snapshots, attempts, history, or prior output. New attempts use new directories.
 - AI may explain a blocked result and prepare a checklist, but不得自動產生 missing command/action or authorize an external operation.

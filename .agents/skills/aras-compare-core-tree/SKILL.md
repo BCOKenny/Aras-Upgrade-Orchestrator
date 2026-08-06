@@ -42,9 +42,9 @@ description: Use when Codex 需要驗證三份 Aras Core Tree 輸入、比較 Cl
 - 不得手工建立或改寫 `Completed`、摘要、版本證據、規則 Checksum 或人工確認結果。
 - 不建立分類 D；歧義檔案不複製、不改名、不進正式交付。
 - 不覆寫舊嘗試；輸出不得與任何輸入相同、位於其上下層或造成重疊寫入。
-- 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。
-- 目前缺少 UI／CLI 及案件 command/action 時，實際客戶案件停止在正式執行介面邊界，不手工模擬持久化。
-- 不連接 DB、不啟動 Aras 工具、不操作正式 `Support`、`Solutions` 或 `K:`。
+- 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。使用者明確授權 `K:\70.ArasUpgradeCases\<case-id>` 時，僅可將該案件內的 `core-tree\inputs` 與 evidence 視為唯讀隔離測試資料。
+- 只有正式、受測的 command/action 可在同一案件的新的 `core-tree\attempts` 建立輸出，並由正式案件能力追加 `.orchestrator\history.jsonl`；command/action 缺失時停止，不手工模擬持久化。
+- 不連接 DB、不啟動 Aras 工具、不操作正式 `Support` 或 `Solutions`，也不得讀寫其他 K: 路徑。
 
 ## 常見錯誤
 

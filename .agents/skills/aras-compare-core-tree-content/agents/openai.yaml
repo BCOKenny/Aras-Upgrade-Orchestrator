@@ -1,0 +1,4 @@
+interface:
+  display_name: "比較 Core Tree 檔案內容"
+  short_description: "依 Client／Server 固定規則判定檔案內容是否相同"
+  default_prompt: "使用 $aras-compare-core-tree-content 依 Core Tree 規則比較兩個檔案內容是否相同。"

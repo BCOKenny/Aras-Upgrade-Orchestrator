@@ -1,0 +1,4 @@
+interface:
+  display_name: "建立 Core Tree 比較交付"
+  short_description: "建立不可覆寫的 A／B／C 目錄與完成狀態"
+  default_prompt: "使用 $aras-build-core-tree-delivery 依已確認分類建立 Core Tree 比較交付目錄。"

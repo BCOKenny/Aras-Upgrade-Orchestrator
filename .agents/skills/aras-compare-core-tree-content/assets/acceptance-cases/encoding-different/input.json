@@ -1,0 +1,8 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-compare-core-tree-content",
+  "relativePath": "Client/app.js",
+  "left": { "base64": "Y29uc3QgeD0xOwo=" },
+  "right": { "base64": "//5jAG8AbgBzAHQAIAB4AD0AMQA7AAoA" },
+  "serverRules": { "version": "server-text/1", "relativePaths": ["Server/method-config.xml"], "checksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

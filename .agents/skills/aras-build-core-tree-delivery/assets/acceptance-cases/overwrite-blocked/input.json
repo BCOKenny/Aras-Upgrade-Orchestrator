@@ -1,0 +1,8 @@
+{
+  "classificationResult": { "status": "ReadyToComplete", "items": [{ "classification": "A", "sourceRelativePath": "Client/new.js" }], "manualReviews": [], "errors": [] },
+  "customerFiles": { "Client/new.js": { "base64": "YWRk" } },
+  "sourceOotbFiles": {},
+  "targetOotbFiles": {},
+  "outputState": { "attemptExists": true, "attemptId": "delivery-existing-001", "existingFiles": { "A/CustomerSource/Client/old.js": { "base64": "b2xkLW91dHB1dA==" } } },
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}

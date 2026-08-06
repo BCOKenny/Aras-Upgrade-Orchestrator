@@ -1,0 +1,5 @@
+{
+  "sourceRelativePath": "Client/scripts/app.js",
+  "targetRelativePaths": ["Client/scripts/app.ts"],
+  "evidence": { "inputIds": ["source-file", "target-ootb-r38"], "ruleVersion": "extension-evolution/1", "ruleChecksum": "fixture-extension-evolution" }
+}

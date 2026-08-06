@@ -1,0 +1,10 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-resolve-core-tree-file-mappings",
+  "status": "Blocked",
+  "result": { "mapping": "Ambiguous", "candidates": ["Client/scripts/app.ts", "Client/scripts/app.tsx"], "appliedEvolution": ".js → .ts／.tsx" },
+  "messages": [
+    { "kind": "ManualReview", "code": "MultipleTargetMappings", "relativePath": "Client/scripts/app.js", "details": { "candidates": ["Client/scripts/app.ts", "Client/scripts/app.tsx"] } }
+  ],
+  "evidence": { "inputIds": ["source-file", "target-ootb-r38"], "ruleVersion": "extension-evolution/1", "ruleChecksum": "fixture-extension-evolution" }
+}

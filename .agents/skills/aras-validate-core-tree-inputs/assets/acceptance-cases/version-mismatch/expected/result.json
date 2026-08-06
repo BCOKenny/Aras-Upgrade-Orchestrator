@@ -1,0 +1,8 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-validate-core-tree-inputs",
+  "status": "Blocked",
+  "result": { "validatedInputs": [] },
+  "messages": [{ "kind": "Error", "code": "VersionEvidenceMismatch", "relativePath": "Innovator", "details": { "input": "customer" } }],
+  "evidence": { "inputIds": ["customer-12sp9", "ootb-12sp9", "ootb-r38"], "ruleVersion": "r38-server-text/1", "ruleChecksum": "447FB7778893E56462299AED6A554307D4182A45F9B934B1287F3C9224F57AA7" }
+}

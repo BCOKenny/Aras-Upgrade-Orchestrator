@@ -1,0 +1,12 @@
+{
+  "contractVersion": "core-tree-capabilities/1",
+  "capability": "aras-build-core-tree-delivery",
+  "status": "Completed",
+  "result": {
+    "attemptId": "delivery-new-unique-001",
+    "outputFiles": [{ "relativePath": "A/CustomerSource/Client/new.js", "checksum": "7E9E5AC30F2216FD0FD6F5FAED316F2D5983361A4203C3330CFA46EF65BB4767" }],
+    "manifestFiles": ["completion-manifest.json"]
+  },
+  "messages": [],
+  "evidence": { "inputIds": ["customer", "source-ootb", "target-ootb"], "ruleVersion": "server-text/1", "ruleChecksum": "15A8345F004C63131F269F5D15602132F9D70C79359709DB49535C1A270D2BAD" }
+}
