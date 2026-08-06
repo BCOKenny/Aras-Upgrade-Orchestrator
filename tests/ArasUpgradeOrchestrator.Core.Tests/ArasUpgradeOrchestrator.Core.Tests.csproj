@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/ArasUpgradeOrchestrator.Core/ArasUpgradeOrchestrator.Core.csproj" />
+    <ProjectReference Include="../../tools/ArasUpgradeOrchestrator.CoreTree.Cli/ArasUpgradeOrchestrator.CoreTree.Cli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

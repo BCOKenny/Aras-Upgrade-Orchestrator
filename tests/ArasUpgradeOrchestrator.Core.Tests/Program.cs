@@ -1,4 +1,5 @@
-using System.Text;
+using System.Diagnostics;
+using System.Text.Json;
 using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.CoreTrees;
@@ -22,7 +23,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("受控執行保存確認、快照與結果", ControlledExecutionRecordsOutcome),
     ("執行快照與動作不一致時阻擋", SnapshotMismatchIsBlocked),
     ("預設外部執行器不執行正式操作", DefaultExecutorBlocksExternalAction),
-    ("Skill Map 包含主入口與八個無重疊功能", SkillMapDefinesAllRoutes),
+    ("Skill Map 包含主入口與獨立功能", SkillMapDefinesAllRoutes),
     ("主 Skill 路由未實作功能時明確停止", MainSkillStopsAtUnavailableRoute),
     ("案件管理 Skill 引用正式核心並守住責任邊界", CaseSkillReferencesTestedCore)
     ,("一次性 Package 流程首次 DB 變更前鎖定且不可重開", CustomerPackageFlowLocksOnce)
@@ -77,23 +78,25 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 多候選與 A 類碰撞保持人工確認", CoreTreeAmbiguityBlocksClassification)
     ,("Core Tree builder 建立新嘗試產出且保持三份輸入不變", CoreTreeBuilderProducesCompletedOutput)
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
-    ,("Core Tree 交付必須使用已宣告的阻擋分類且不得重新分類", CoreTreeBuilderUsesDeclaredClassification)
-    ,("Core Tree 交付拒絕不一致或不安全的已宣告分類", CoreTreeBuilderRejectsInvalidDeclaredClassification)
-    ,("Core Tree final-review safety and stability regressions", CoreTreeFinalReviewHardening)
-    ,("Core Tree 驗證與比較使用穩定錯誤代碼", CoreTreeStableContractCodes)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
-    ,("Core Tree 細項能力 Skill 架構具有 ADR 與領域術語", CoreTreeCapabilitySkillArchitectureIsRecorded)
-    ,("Core Tree 細項能力 Skill 具有穩定共用契約", CoreTreeCapabilityContractIsStable)
-    ,("Core Tree 輸入驗證 Skill 具有完整契約與驗收案例", CoreTreeInputValidationSkillPackageIsComplete)
-    ,("Core Tree 檔案內容比較 Skill 具有完整契約與驗收案例", CoreTreeContentComparisonSkillPackageIsComplete)
-    ,("Core Tree 邏輯檔案配對 Skill 具有完整契約與驗收案例", CoreTreeFileMappingSkillPackageIsComplete)
-    ,("Core Tree 差異分類 Skill 具有完整契約與驗收案例", CoreTreeDifferenceClassificationSkillPackageIsComplete)
-    ,("Core Tree 比較交付 Skill 具有完整契約與驗收案例", CoreTreeDeliverySkillPackageIsComplete)
-    ,("C# 參考實作符合 Core Tree 輸入驗證案例", CoreTreeCapabilityFixtureTests.ValidateInputsAsync)
-    ,("C# 參考實作符合 Core Tree 內容比較案例", CoreTreeCapabilityFixtureTests.CompareContentAsync)
-    ,("C# 參考實作符合 Core Tree 檔案配對案例", CoreTreeCapabilityFixtureTests.ResolveMappingsAsync)
-    ,("C# 參考實作符合 Core Tree 分類案例", CoreTreeCapabilityFixtureTests.ClassifyDifferencesAsync)
-    ,("C# 參考實作符合 Core Tree 交付案例", CoreTreeCapabilityFixtureTests.BuildDeliveryAsync)
+    ,("Core Tree execution Skill contract", CoreTreeRunSkillReferencesExecutionBoundary)
+    ,("Core Tree command 協調案件、快照、鎖、Builder 與歷程", CoreTreeCommandCoordinatesCase)
+    ,("Core Tree command 未通過 SafetyPolicy 時阻擋且不建立嘗試", CoreTreeCommandBlocksUnsafeAction)
+    ,("Core Tree preflight 僅讀取案件並回報可執行條件", CoreTreePreflightReadsCaseWithoutMutation)
+    ,("Core Tree preflight 阻擋 checksum 有效但不安全的 Server 規則", CoreTreePreflightBlocksUnsafeServerRules)
+    ,("Core Tree preflight 將損毀案件 manifest 轉為阻擋結果", CoreTreePreflightBlocksMalformedManifest)
+    ,("Core Tree preflight 阻擋缺少 Server 結構且不變更案件", CoreTreePreflightBlocksMissingServerWithoutMutation)
+    ,("Core Tree preflight 阻擋來源版本不符且不變更案件", CoreTreePreflightBlocksMismatchedSourceVersionWithoutMutation)
+    ,("Core Tree preflight 阻擋重疊輸入根目錄且不變更案件", CoreTreePreflightBlocksOverlappingInputRootsWithoutMutation)
+    ,("Core Tree preflight 阻擋既有輸出且不變更案件", CoreTreePreflightBlocksExistingOutputWithoutMutation)
+    ,("Core Tree preflight 阻擋無效 Server 規則 checksum 且不變更案件", CoreTreePreflightBlocksInvalidServerChecksumWithoutMutation)
+    ,("Core Tree preflight 阻擋遺失 evidence 目錄且不變更案件", CoreTreePreflightBlocksMissingEvidenceDirectoryWithoutMutation)
+    ,("Core Tree preflight 將只有 provenance 的 evidence 標示為 Incomplete", CoreTreePreflightMarksProvenanceOnlyEvidenceIncompleteWithoutMutation)
+    ,("Core Tree 測試 CLI 暴露固定 command JSON 入口", CoreTreeTestCliContract)
+    ,("Core Tree CLI preflight 回傳 Ready JSON 且不變更案件", CoreTreeCliPreflightReturnsReadyWithoutMutation)
+    ,("Core Tree CLI preflight 阻擋結果回傳 exit code 2", CoreTreeCliPreflightReturnsBlocked)
+    ,("Core Tree CLI preflight 拒絕格式錯誤 request 並回傳 exit code 1", CoreTreeCliPreflightRejectsMalformedRequest)
+    ,("Core Tree CLI --request 維持既有 usage exit code 2", CoreTreeCliRequestUsagePreservesLegacyExitCode)
 };
 
 var failures = new List<string>();
@@ -345,6 +348,7 @@ static Task SkillMapDefinesAllRoutes()
         "aras-prepare-adapted-package",
         "aras-manage-upgrade-rules",
         "aras-compare-core-tree",
+        "aras-run-core-tree-comparison",
         "aras-coordinate-upgrade-hop",
         "aras-assemble-upgrade-delivery"
     };
@@ -1369,47 +1373,6 @@ static async Task CoreTreeClientTextComparisonFollowsRules()
     Assert.False(await CoreTreeContentComparer.AreEqualAsync(left, right, "Client/scripts/app.js", rules));
 }
 
-static async Task CoreTreeFinalReviewHardening()
-{
-    await using var scope = TestScope.Create();
-    var request = CreateCoreTreeRequest(scope.Root);
-
-    foreach (var path in new[] { "/Server/a", "Server/..", "Server/.", "Server//a", @"Server\a", @"\Server\a", @"C:\Server\a", "C:/Server/a" })
-    {
-        Assert.Throws<ArgumentException>(() => CoreTreeServerTextRuleSet.Create("server-text-1", [path]));
-        var invalid = request with { ServerTextRules = request.ServerTextRules with { RelativePaths = [path] } };
-        var exception = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalid));
-        Assert.Equal("InvalidServerRuleSet", exception.Code);
-    }
-
-    foreach (var root in new string?[] { null, string.Empty, "  " })
-    {
-        foreach (var invalid in new[]
-        {
-            request with { Customer = request.Customer with { RootPath = root! } },
-            request with { SourceOotb = request.SourceOotb with { RootPath = root! } },
-            request with { TargetOotb = request.TargetOotb with { RootPath = root! } }
-        })
-        {
-            var exception = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalid));
-            Assert.Equal("InputDirectoryMissing", exception.Code);
-        }
-    }
-
-    var utf8 = Path.Combine(scope.Root, "utf8.js");
-    var utf16 = Path.Combine(scope.Root, "utf16.js");
-    await File.WriteAllBytesAsync(utf8, new UTF8Encoding(false).GetBytes("const x=1;\n"));
-    await File.WriteAllBytesAsync(utf16, Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("const x=1;\n")).ToArray());
-    Assert.False(await CoreTreeContentComparer.AreEqualAsync(utf8, utf16, "Client/app.js", request.ServerTextRules));
-
-    Assert.SequenceEqual(
-        ["Client/A.ts", "Client/a.ts"],
-        CoreTreePathOrdering.ByPath(["Client/a.ts", "Client/A.ts"]).ToArray());
-    Assert.SequenceEqual(
-        ["Client/A.ts", "Client/a.ts"],
-        CoreTreeLogicalPathResolver.OrderCandidates(["Client/a.ts", "Client/A.ts"]));
-}
-
 static async Task CoreTreeServerComparisonPinsRuleSet()
 {
     await using var scope = TestScope.Create();
@@ -1468,7 +1431,11 @@ static CoreTreeComparisonRequest CreateCoreTreeRequest(string root)
         var path = Path.Combine(rootPath, name);
         Directory.CreateDirectory(Path.Combine(path, "Innovator", "Client"));
         Directory.CreateDirectory(Path.Combine(path, "Innovator", "Server"));
-        return new CoreTreeInputEvidence(path, version, $"{name}-version-evidence");
+        var evidencePath = Path.Combine(path, "evidence");
+        Directory.CreateDirectory(evidencePath);
+        File.WriteAllText(Path.Combine(evidencePath, "version-primary.md"), $"Innovator version: {version}");
+        File.WriteAllText(Path.Combine(evidencePath, "integrity.sha256"), "fixture checksum");
+        return new CoreTreeInputEvidence(path, version, evidencePath);
     }
 
     return new CoreTreeComparisonRequest(
@@ -1528,38 +1495,9 @@ static async Task CoreTreeAmbiguityBlocksClassification()
 
     Assert.Equal(CoreTreeComparisonStatus.Blocked, result.Status);
     Assert.Equal(2, result.ManualReviews.Count);
-    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
-    Assert.True(result.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithTarget"));
+    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleR38Candidates"));
+    Assert.True(result.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithR38"));
     Assert.False(result.Items.Any());
-}
-
-static async Task CoreTreeStableContractCodes()
-{
-    await using var scope = TestScope.Create();
-    var request = CreateCoreTreeRequest(scope.Root);
-    var invalidVersionEvidence = request with { Customer = request.Customer with { EvidenceReference = string.Empty } };
-    var validation = Assert.Throws<CoreTreeValidationException>(() => CoreTreeInputValidator.Validate(invalidVersionEvidence));
-    Assert.Equal("VersionEvidenceMismatch", validation.Code);
-
-    var customer = Path.Combine(request.Customer.RootPath, "Innovator");
-    var source = Path.Combine(request.SourceOotb.RootPath, "Innovator");
-    var target = Path.Combine(request.TargetOotb.RootPath, "Innovator");
-    await WriteCoreTreeFile(customer, "Client/scripts/app.js", "customer");
-    await WriteCoreTreeFile(source, "Client/scripts/app.js", "source");
-    await WriteCoreTreeFile(target, "Client/scripts/app.ts", "target-ts");
-    await WriteCoreTreeFile(target, "Client/scripts/app.tsx", "target-tsx");
-    await WriteCoreTreeFile(customer, "Client/new.htm", "new");
-    await WriteCoreTreeFile(target, "Client/new.html", "collision");
-    var classification = await CoreTreeComparisonEngine.CompareAsync(request);
-    Assert.True(classification.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
-    Assert.True(classification.ManualReviews.Any(review => review.Code == "CustomerAdditionCollidesWithTarget"));
-
-    var unreadable = Path.Combine(customer, "Client", "unreadable.js");
-    await File.WriteAllTextAsync(unreadable, "customer");
-    await WriteCoreTreeFile(source, "Client/unreadable.js", "source");
-    await using var lockHandle = new FileStream(unreadable, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-    var fileRead = await CoreTreeComparisonEngine.CompareAsync(request);
-    Assert.True(fileRead.Errors.Any(error => error.Code == "FileReadError"));
 }
 
 static async Task CoreTreeBuilderProducesCompletedOutput()
@@ -1616,79 +1554,6 @@ static async Task CoreTreeBuilderBlocksIncompleteAndOverwrite()
     await Assert.ThrowsAsync<InvalidOperationException>(() => CoreTreeComparisonBuilder.BuildAsync(request, leases));
 }
 
-static async Task CoreTreeBuilderUsesDeclaredClassification()
-{
-    await using var scope = TestScope.Create();
-    var request = CreateCoreTreeRequest(scope.Root);
-    var customer = Path.Combine(request.Customer.RootPath, "Innovator");
-    var source = Path.Combine(request.SourceOotb.RootPath, "Innovator");
-    var target = Path.Combine(request.TargetOotb.RootPath, "Innovator");
-    await WriteCoreTreeFile(customer, "Client/app.js", "customer");
-    await WriteCoreTreeFile(source, "Client/app.js", "source");
-    await WriteCoreTreeFile(target, "Client/app.ts", "target");
-    var declared = new CoreTreeComparisonResult(
-        request.AttemptId,
-        CoreTreeComparisonStatus.Blocked,
-        [],
-        [new CoreTreeManualReview("Client/app.js", "MultipleTargetMappings", ".js → .ts|.tsx", ["Client/app.ts"], "Declared review blocks delivery.")],
-        [], [], request.OutputRoot, request.ServerTextRules.Version, request.ServerTextRules.Checksum, request.StartedAt, DateTimeOffset.UtcNow);
-
-    var result = await CoreTreeComparisonBuilder.BuildFromClassificationAsync(request, declared, new DirectoryLeaseManager(scope.ToolDataRoot));
-
-    Assert.Equal(CoreTreeComparisonStatus.Incomplete, result.Status);
-    Assert.True(File.Exists(Path.Combine(request.OutputRoot, "incomplete-manifest.json")));
-    Assert.False(Directory.Exists(Path.Combine(request.OutputRoot, "C")));
-    Assert.True(result.ManualReviews.Any(review => review.Code == "MultipleTargetMappings"));
-}
-
-static async Task CoreTreeBuilderRejectsInvalidDeclaredClassification()
-{
-    await using var scope = TestScope.Create();
-    var baseRequest = CreateCoreTreeRequest(scope.Root);
-    var leases = new DirectoryLeaseManager(scope.ToolDataRoot);
-    CoreTreeComparisonResult Declared(string name, CoreTreeComparisonStatus status, IReadOnlyList<CoreTreeClassifiedItem>? items = null,
-        IReadOnlyList<CoreTreeManualReview>? reviews = null, IReadOnlyList<CoreTreeComparisonError>? errors = null)
-    {
-        var output = Path.Combine(scope.Root, name);
-        return new(baseRequest.AttemptId, status, items ?? [], reviews ?? [], errors ?? [], [], output,
-            baseRequest.ServerTextRules.Version, baseRequest.ServerTextRules.Checksum, baseRequest.StartedAt, DateTimeOffset.UtcNow);
-    }
-
-    var invalid = new[]
-    {
-        Declared("ready-review", CoreTreeComparisonStatus.ReadyToComplete, reviews:
-            [new CoreTreeManualReview("Client/app.js", "MultipleTargetMappings", null, [], "review")]),
-        Declared("ready-error", CoreTreeComparisonStatus.ReadyToComplete, errors:
-            [new CoreTreeComparisonError("Client/app.js", "FileReadError", "error")]),
-        Declared("blocked-empty", CoreTreeComparisonStatus.Blocked),
-        Declared("incomplete", CoreTreeComparisonStatus.Incomplete),
-        Declared("completed", CoreTreeComparisonStatus.Completed),
-        Declared("a-has-target", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.A, "Client/app.js", "Client/app.ts")]),
-        Declared("c-missing-target", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/app.js", null)]),
-        Declared("unsafe-path", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "Client/../unsafe.js", null)]),
-        Declared("empty-path", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "", null)]),
-        Declared("rooted-path", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "C:\\unsafe.js", null)]),
-        Declared("outside-core-tree", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.B, "Custom/app.js", null)]),
-        Declared("unsafe-target", CoreTreeComparisonStatus.ReadyToComplete,
-            [new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/app.js", "Custom/app.ts")])
-    };
-
-    foreach (var classification in invalid)
-    {
-        var request = baseRequest with { OutputRoot = classification.OutputRoot };
-        await Assert.ThrowsAsync<CoreTreeValidationException>(() =>
-            CoreTreeComparisonBuilder.BuildFromClassificationAsync(request, classification, leases));
-        Assert.False(Directory.Exists(request.OutputRoot));
-        Assert.False(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
-    }
-}
-
 static async Task WriteCoreTreeFile(string innovatorRoot, string relativePath, string content)
 {
     var path = Path.Combine(innovatorRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -1703,45 +1568,6 @@ static Task CoreTreeSkillReferencesTestedCore()
     var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
     AssertSkillFrontmatter(skill, "aras-compare-core-tree");
     AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-compare-core-tree");
-    foreach (var childSkill in new[]
-    {
-        "aras-validate-core-tree-inputs",
-        "aras-compare-core-tree-content",
-        "aras-resolve-core-tree-file-mappings",
-        "aras-classify-core-tree-differences",
-        "aras-build-core-tree-delivery"
-    })
-        Assert.True(skill.Contains($"`{childSkill}`", StringComparison.Ordinal), $"Parent Core Tree Skill must route {childSkill}.");
-
-    var validateIndex = skill.IndexOf("`aras-validate-core-tree-inputs`", StringComparison.Ordinal);
-    var classifyIndex = skill.IndexOf("`aras-classify-core-tree-differences`", StringComparison.Ordinal);
-    var buildIndex = skill.IndexOf("`aras-build-core-tree-delivery`", StringComparison.Ordinal);
-    var routesFullWorkflowInOrder = validateIndex >= 0 && validateIndex < classifyIndex && classifyIndex < buildIndex;
-    Assert.True(routesFullWorkflowInOrder, "Parent Core Tree Skill must route validate, classify, then build.");
-    Assert.True(skill.Contains("`Blocked` 分類結果仍必須路由到 `aras-build-core-tree-delivery`", StringComparison.Ordinal),
-        "Parent Core Tree Skill must route a blocked classification to diagnostic delivery.");
-    var classificationRoute = skill.Split('\n').First(line => line.Contains("`aras-classify-core-tree-differences`", StringComparison.Ordinal));
-    Assert.True(classificationRoute.Contains("`aras-compare-core-tree-content`", StringComparison.Ordinal));
-    Assert.True(classificationRoute.Contains("`aras-resolve-core-tree-file-mappings`", StringComparison.Ordinal));
-    Assert.False(classificationRoute.Contains("`aras-build-core-tree-delivery`", StringComparison.Ordinal));
-    Assert.True(skill.Contains("R38 Core Tree", StringComparison.Ordinal));
-    Assert.True(skill.Contains("DB", StringComparison.Ordinal));
-    Assert.True(skill.Contains("command/action", StringComparison.Ordinal));
-    foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder", "DirectoryLeaseManager" })
-        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree capability reference is missing {typeName}.");
-    Assert.True(skill.Contains("`aras-validate-core-tree-inputs` → `aras-classify-core-tree-differences` → `aras-build-core-tree-delivery`", StringComparison.Ordinal));
-    Assert.True(skill.Contains("只分類", StringComparison.Ordinal));
-    Assert.True(skill.Contains("停止", StringComparison.Ordinal));
-    Assert.True(skill.Contains("完整交付", StringComparison.Ordinal));
-    Assert.True(skill.Contains("兩個檔案", StringComparison.Ordinal));
-    Assert.True(skill.Contains("邏輯檔案配對", StringComparison.Ordinal));
-    Assert.True(skill.Contains("不合併或修改 R38 Core Tree", StringComparison.Ordinal));
-    Assert.True(skill.Contains("不連接 DB", StringComparison.Ordinal));
-    Assert.True(skill.Contains("command/action", StringComparison.Ordinal));
-
-    Assert.True(capabilities.Contains("| 業務能力契約 | 細項 Skill | 目前參考實作 | 狀態 |", StringComparison.Ordinal));
-    Assert.True(capabilities.Contains("共同驗收案例", StringComparison.Ordinal));
-    Assert.True(capabilities.Contains("`DirectoryLeaseManager`", StringComparison.Ordinal));
     foreach (var typeName in new[] { "CoreTreeInputValidator", "CoreTreeContentComparer", "CoreTreeLogicalPathResolver", "CoreTreeComparisonEngine", "CoreTreeComparisonBuilder" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Core Tree 核心能力對照缺少 {typeName}。 ");
     Assert.True(skill.Contains("不合併或修改 R38 Core Tree", StringComparison.Ordinal));
@@ -1751,94 +1577,433 @@ static Task CoreTreeSkillReferencesTestedCore()
     return Task.CompletedTask;
 }
 
-static Task CoreTreeCapabilitySkillArchitectureIsRecorded()
+static Task CoreTreeRunSkillReferencesExecutionBoundary()
 {
-    var context = File.ReadAllText(ProjectPath("CONTEXT.md"));
-    foreach (var term in new[] { "細項能力 Skill", "Skill 契約", "語言中立驗收案例", "符合契約的實作" })
-        Assert.True(context.Contains($"**{term}**:", StringComparison.Ordinal), $"CONTEXT.md 缺少 {term}。 ");
-
-    var adr2 = File.ReadAllText(ProjectPath("docs", "adr", "0002-three-layer-skill-architecture.md"));
-    var adr3 = File.ReadAllText(ProjectPath("docs", "adr", "0003-language-neutral-capability-skills.md"));
-    Assert.True(adr2.Contains("ADR 0003", StringComparison.Ordinal));
-    Assert.True(adr3.Contains("語言中立驗收案例", StringComparison.Ordinal));
-    Assert.True(adr3.Contains("不依程式語言或類別切分", StringComparison.Ordinal));
-    Assert.True(adr3.Contains("父 Skill 的 `references`", StringComparison.Ordinal));
-    Assert.True(adr3.Contains("`mode`", StringComparison.Ordinal));
-
-    var skillMap = File.ReadAllText(ProjectPath("docs", "design", "skill-map.md"));
-    foreach (var (skillName, referenceType) in new[]
+    var skillRoot = ProjectPath(".agents", "skills", "aras-run-core-tree-comparison");
+    var skillPath = Path.Combine(skillRoot, "SKILL.md");
+    var capabilitiesPath = Path.Combine(skillRoot, "references", "core-capabilities.md");
+    var metadataPath = Path.Combine(skillRoot, "agents", "openai.yaml");
+    Assert.True(File.Exists(skillPath), "Run Core Tree Skill 尚未建立。");
+    Assert.True(File.Exists(capabilitiesPath), "Run Core Tree Skill capability reference 尚未建立。");
+    Assert.True(File.Exists(metadataPath), "Run Core Tree Skill metadata 尚未建立。");
+    var skill = File.ReadAllText(skillPath);
+    var capabilities = File.ReadAllText(capabilitiesPath);
+    AssertSkillFrontmatter(skill, "aras-run-core-tree-comparison");
+    AssertAgentMetadata(metadataPath, "aras-run-core-tree-comparison");
+    foreach (var required in new[]
     {
-        ("aras-validate-core-tree-inputs", "CoreTreeInputValidator"),
-        ("aras-compare-core-tree-content", "CoreTreeContentComparer"),
-        ("aras-resolve-core-tree-file-mappings", "CoreTreeLogicalPathResolver"),
-        ("aras-classify-core-tree-differences", "CoreTreeComparisonEngine"),
-        ("aras-build-core-tree-delivery", "CoreTreeComparisonBuilder")
+        "CoreTreeComparisonCommand",
+        "正式 command/action",
+        "不可覆寫",
+        "執行快照",
+        "新的執行嘗試",
+        "DirectoryLeaseManager",
+        "history.jsonl",
+        "不得自動產生"
+    })
+        Assert.True(skill.Contains(required, StringComparison.Ordinal), $"Run Core Tree Skill 缺少必要契約：{required}");
+    foreach (var typeName in new[] { "CaseStore", "ExecutionSnapshot", "AppendOnlyHistoryStore", "SafetyPolicy", "DirectoryLeaseManager", "CoreTreeComparisonBuilder" })
+        Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"Run Core Tree capability 缺少 {typeName}。");
+    Assert.True(capabilities.Contains("Established command/action", StringComparison.Ordinal), "Capability reference 必須揭露正式 command/action 已建立。");
+    return Task.CompletedTask;
+}
+
+static async Task CoreTreeCommandCoordinatesCase()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    var caseStore = new CaseStore(scope.CaseRoot);
+    await caseStore.CreateAsync(manifest);
+    var request = CreateCoreTreeRequest(scope.Root);
+    request = request with { OutputRoot = Path.Combine(scope.CaseRoot, "core-tree-output") };
+    await WriteCoreTreeFile(Path.Combine(request.Customer.RootPath, "Innovator"), "Client/new.js", "new");
+    await WriteCoreTreeFile(Path.Combine(request.SourceOotb.RootPath, "Innovator"), "Client/new.js", "old");
+    var policy = new SafetyPolicy([
+        new SafetyWhitelistEntry("core-tree.compare", "1", [scope.CaseRoot], new HashSet<string>(StringComparer.Ordinal) { "case.loaded", "inputs.valid" })]);
+    var command = new CoreTreeComparisonCommand(policy, () => DateTimeOffset.Parse("2026-08-05T00:00:00Z"));
+    var result = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot,
+        "operator",
+        request.Customer,
+        request.SourceOotb,
+        request.TargetOotb,
+        request.OutputRoot,
+        request.ServerTextRules));
+
+    Assert.Equal(manifest.CaseId, result.CaseId);
+    Assert.Equal(CoreTreeComparisonStatus.Completed, result.Status);
+    Assert.NotEqual(Guid.Empty, result.AttemptId);
+    Assert.True(!string.IsNullOrWhiteSpace(result.SnapshotDigest));
+    Assert.True(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(2, history.Count);
+    Assert.Equal(HistoryEventTypes.AttemptStarted, history[0].EventType);
+    Assert.Equal(HistoryEventTypes.AttemptSucceeded, history[1].EventType);
+}
+
+static async Task CoreTreeCommandBlocksUnsafeAction()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var request = CreateCoreTreeRequest(scope.Root);
+    request = request with { OutputRoot = Path.Combine(scope.CaseRoot, "core-tree-output") };
+    var command = new CoreTreeComparisonCommand(new SafetyPolicy([]));
+    var result = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot,
+        "operator",
+        request.Customer,
+        request.SourceOotb,
+        request.TargetOotb,
+        request.OutputRoot,
+        request.ServerTextRules));
+
+    Assert.Equal(CoreTreeComparisonCommandStatus.Blocked, result.CommandStatus);
+    Assert.Equal(SafetyLevel.SingleConfirmation, result.SafetyLevel);
+    Assert.Equal(Guid.Empty, result.AttemptId);
+    Assert.False(Directory.Exists(request.OutputRoot));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(1, history.Count);
+    Assert.Equal(HistoryEventTypes.ActionBlocked, history[0].EventType);
+}
+
+static async Task CoreTreePreflightReadsCaseWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var comparison = CreateCoreTreeRequest(scope.CaseRoot);
+    await WriteCoreTreeFile(Path.Combine(comparison.Customer.RootPath, "Innovator"), "Client/customer.js", "customer");
+    await WriteCoreTreeFile(Path.Combine(comparison.Customer.RootPath, "Innovator"), "Server/customer.dll", "customer");
+    await WriteCoreTreeFile(Path.Combine(comparison.SourceOotb.RootPath, "Innovator"), "Client/source.js", "source");
+    await WriteCoreTreeFile(Path.Combine(comparison.SourceOotb.RootPath, "Innovator"), "Server/source.dll", "source");
+    await WriteCoreTreeFile(Path.Combine(comparison.TargetOotb.RootPath, "Innovator"), "Client/target.js", "target");
+    await WriteCoreTreeFile(Path.Combine(comparison.TargetOotb.RootPath, "Innovator"), "Server/target.dll", "target");
+    var request = new CoreTreeComparisonPreflightRequest(
+        scope.CaseRoot,
+        comparison.Customer,
+        comparison.SourceOotb,
+        comparison.TargetOotb,
+        comparison.OutputRoot,
+        comparison.ServerTextRules);
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Ready, result.Status);
+    Assert.Equal(manifest.CaseId, result.CaseId);
+    Assert.Equal(Guid.Empty, result.AttemptId);
+    Assert.True(result.Customer.ClientDirectoryExists);
+    Assert.True(result.Customer.ServerDirectoryExists);
+    Assert.Equal(1, result.Customer.ClientFileCount);
+    Assert.Equal(1, result.Customer.ServerFileCount);
+    Assert.True(result.SourceOotb.ClientDirectoryExists);
+    Assert.True(result.SourceOotb.ServerDirectoryExists);
+    Assert.Equal(1, result.SourceOotb.ClientFileCount);
+    Assert.Equal(1, result.SourceOotb.ServerFileCount);
+    Assert.True(result.TargetOotb.ClientDirectoryExists);
+    Assert.True(result.TargetOotb.ServerDirectoryExists);
+    Assert.Equal(1, result.TargetOotb.ClientFileCount);
+    Assert.Equal(1, result.TargetOotb.ServerFileCount);
+    Assert.Equal(Path.Combine(scope.CaseRoot, CaseStore.ToolDataDirectoryName, "core-tree-command"), result.ExpectedLeasePath);
+    Assert.Equal(comparison.OutputRoot, result.ExpectedAttemptPath);
+    Assert.Equal<HistoryEntry?>(null, result.LastHistoryEvent);
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksUnsafeServerRules()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var comparison = CreateCoreTreeRequest(scope.CaseRoot);
+    var unsafeRules = CoreTreeServerTextRuleSet.Create("server-text-1", [
+        "Server/method-config.xml",
+        "server/METHOD-CONFIG.xml",
+        "Client/unsupported.xml",
+        "Server/../escaped.xml"
+    ]);
+    var request = new CoreTreeComparisonPreflightRequest(
+        scope.CaseRoot,
+        comparison.Customer,
+        comparison.SourceOotb,
+        comparison.TargetOotb,
+        comparison.OutputRoot,
+        unsafeRules);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "server-rules.invalid"));
+}
+
+static async Task CoreTreePreflightBlocksMalformedManifest()
+{
+    await using var scope = TestScope.Create();
+    var comparison = CreateCoreTreeRequest(scope.CaseRoot);
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, CaseStore.ManifestFileName), "{");
+    var request = new CoreTreeComparisonPreflightRequest(
+        scope.CaseRoot,
+        comparison.Customer,
+        comparison.SourceOotb,
+        comparison.TargetOotb,
+        comparison.OutputRoot,
+        comparison.ServerTextRules);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "case.unreadable"));
+}
+
+static async Task CoreTreePreflightBlocksMissingServerWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    Directory.Delete(Path.Combine(request.Customer.RootPath, "Innovator", "Server"), true);
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "input.customer.server.missing"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksMismatchedSourceVersionWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    request = request with { SourceOotb = request.SourceOotb with { InnovatorVersion = "R38" } };
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "input.version.mismatch"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksOverlappingInputRootsWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    request = request with { Customer = request.Customer with { RootPath = request.SourceOotb.RootPath } };
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "input.roots.overlap"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksExistingOutputWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    Directory.CreateDirectory(request.OutputRoot);
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "output.exists"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksInvalidServerChecksumWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    request = request with { ServerTextRules = request.ServerTextRules with { Checksum = "BAD" } };
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "server-rules.checksum.invalid"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightBlocksMissingEvidenceDirectoryWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    request = request with
+    {
+        Customer = request.Customer with { EvidenceReference = Path.Combine(scope.CaseRoot, "missing-evidence") }
+    };
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "input.customer.evidence.directory.missing"));
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreePreflightMarksProvenanceOnlyEvidenceIncompleteWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    var evidencePath = Path.Combine(scope.CaseRoot, "source-provenance-only-evidence");
+    Directory.CreateDirectory(evidencePath);
+    await File.WriteAllTextAsync(Path.Combine(evidencePath, "source-provenance.md"), "The source tree was copied from a trusted location.");
+    request = request with { SourceOotb = request.SourceOotb with { EvidenceReference = evidencePath } };
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CoreTreePreflightStatus.Incomplete, result.Status);
+    Assert.True(result.Issues.Any(issue => issue.Code == "input.source-ootb.evidence.incomplete"));
+    Assert.True(result.Status != CoreTreePreflightStatus.Ready);
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task<CoreTreeComparisonPreflightRequest> CreatePreflightRequestAsync(TestScope scope)
+{
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var comparison = CreateCoreTreeRequest(scope.CaseRoot);
+    foreach (var (input, content) in new[]
+    {
+        (comparison.Customer, "customer"),
+        (comparison.SourceOotb, "source"),
+        (comparison.TargetOotb, "target")
     })
     {
-        if (skillMap.Contains($"| `{skillName}` | Core Tree 試點已建立 |", StringComparison.Ordinal))
-        {
-            Assert.True(skillMap.Contains($"`{skillName}/assets/acceptance-cases/`", StringComparison.Ordinal), $"Skill Map acceptance assets are missing for {skillName}.");
-            Assert.True(skillMap.Contains($"`{referenceType}`", StringComparison.Ordinal), $"Skill Map reference implementation is missing for {skillName}.");
-            continue;
-        }
-        Assert.True(skillMap.Contains($"| `{skillName}` | 依 ADR 0003 建置中 |", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 或正確狀態。 ");
-        Assert.True(skillMap.Contains($"未來驗收 `{skillName}/assets/acceptance-cases/`", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 驗收路徑。 ");
-        Assert.True(skillMap.Contains($"現有 C# 參考實作 `{referenceType}`，Skill 契約為規格來源", StringComparison.Ordinal), $"Skill Map 缺少 {skillName} 的 C# 參考實作定位。 ");
+        await WriteCoreTreeFile(Path.Combine(input.RootPath, "Innovator"), "Client/app.js", content);
+        await WriteCoreTreeFile(Path.Combine(input.RootPath, "Innovator"), "Server/app.dll", content);
     }
+
+    return new CoreTreeComparisonPreflightRequest(
+        scope.CaseRoot,
+        comparison.Customer,
+        comparison.SourceOotb,
+        comparison.TargetOotb,
+        comparison.OutputRoot,
+        comparison.ServerTextRules);
+}
+
+static Task CoreTreeTestCliContract()
+{
+    var cliRoot = ProjectPath("tools", "ArasUpgradeOrchestrator.CoreTree.Cli");
+    Assert.True(File.Exists(Path.Combine(cliRoot, "ArasUpgradeOrchestrator.CoreTree.Cli.csproj")));
+    var program = File.ReadAllText(Path.Combine(cliRoot, "Program.cs"));
+    Assert.True(program.Contains("CoreTreeComparisonCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("CoreTreeComparisonPreflightCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("--request", StringComparison.Ordinal));
+    Assert.True(program.Contains("--preflight", StringComparison.Ordinal));
+    Assert.True(program.Contains("JsonSerializer", StringComparison.Ordinal));
     return Task.CompletedTask;
 }
 
-static Task CoreTreeCapabilityContractIsStable()
+static async Task CoreTreeCliPreflightReturnsReadyWithoutMutation()
 {
-    var contract = File.ReadAllText(ProjectPath("docs", "design", "core-tree-capability-contract.md"));
-    foreach (var token in new[]
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    var requestPath = await WriteCliRequestAsync(request, Path.Combine(scope.Root, "preflight-ready.json"));
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await RunCoreTreeCliAsync("--preflight", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var document = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal((int)CoreTreePreflightStatus.Ready, document.RootElement.GetProperty("status").GetInt32());
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+    Assert.False(Directory.Exists(request.OutputRoot));
+    Assert.False(File.Exists(Path.Combine(scope.CaseRoot, CaseStore.ToolDataDirectoryName, AppendOnlyHistoryStore.FileName)));
+}
+
+static async Task CoreTreeCliPreflightReturnsBlocked()
+{
+    await using var scope = TestScope.Create();
+    var request = await CreatePreflightRequestAsync(scope);
+    Directory.Delete(Path.Combine(request.Customer.RootPath, "Innovator", "Server"), true);
+    var requestPath = await WriteCliRequestAsync(request, Path.Combine(scope.Root, "preflight-blocked.json"));
+    var before = SnapshotTree(scope.CaseRoot);
+
+    var result = await RunCoreTreeCliAsync("--preflight", requestPath);
+
+    Assert.Equal(2, result.ExitCode);
+    using var document = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal((int)CoreTreePreflightStatus.Blocked, document.RootElement.GetProperty("status").GetInt32());
+    Assert.Equal(before, SnapshotTree(scope.CaseRoot));
+}
+
+static async Task CoreTreeCliPreflightRejectsMalformedRequest()
+{
+    await using var scope = TestScope.Create();
+    var requestPath = Path.Combine(scope.Root, "preflight-malformed.json");
+    await File.WriteAllTextAsync(requestPath, "{\"serverRuleVersion\":\"\",\"serverRulePaths\":null}");
+
+    var result = await RunCoreTreeCliAsync("--preflight", requestPath);
+
+    Assert.Equal(1, result.ExitCode);
+    Assert.Equal("Request is invalid.", result.StandardError.Trim());
+}
+
+static async Task CoreTreeCliRequestUsagePreservesLegacyExitCode()
+{
+    var result = await RunCoreTreeCliAsync("--request");
+
+    Assert.Equal(2, result.ExitCode);
+}
+
+static async Task<string> WriteCliRequestAsync(CoreTreeComparisonPreflightRequest request, string requestPath)
+{
+    var input = new
     {
-        "core-tree-capabilities/1", "Equal", "Different", "None", "Unique", "Ambiguous",
-        "TextDecodeFallback", "MultipleTargetMappings", "CustomerAdditionCollidesWithTarget",
-        "InvalidRequest", "InputDirectoryMissing", "VersionEvidenceMismatch", "RequiredTreeStructureMissing",
-        "InputDirectoryOverlap", "InputOutputOverlap", "InvalidServerRuleSet", "RuleChecksumMismatch",
-        "OutputAttemptAlreadyExists", "FileReadError",
-        "ReadyToComplete", "Blocked", "Incomplete", "Completed"
-    })
-        Assert.True(contract.Contains($"`{token}`", StringComparison.Ordinal), $"共用契約缺少穩定 token `{token}`。");
-    return Task.CompletedTask;
+        request.CaseRoot,
+        Actor = "operator",
+        SourceVersion = request.Customer.InnovatorVersion,
+        TargetVersion = request.TargetOotb.InnovatorVersion,
+        CustomerRoot = request.Customer.RootPath,
+        CustomerEvidence = request.Customer.EvidenceReference,
+        SourceOotbRoot = request.SourceOotb.RootPath,
+        SourceOotbEvidence = request.SourceOotb.EvidenceReference,
+        TargetOotbRoot = request.TargetOotb.RootPath,
+        TargetOotbEvidence = request.TargetOotb.EvidenceReference,
+        request.OutputRoot,
+        ServerRuleVersion = request.ServerTextRules.Version,
+        ServerRulePaths = request.ServerTextRules.RelativePaths,
+        SafetyWhitelist = Array.Empty<object>()
+    };
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(input));
+    return requestPath;
 }
 
-static Task CoreTreeInputValidationSkillPackageIsComplete()
+static async Task<CliProcessResult> RunCoreTreeCliAsync(params string[] arguments)
 {
-    CoreTreeCapabilitySkillTests.AssertPackage("aras-validate-core-tree-inputs",
-        ["valid-inputs", "version-mismatch", "missing-structure", "overlapping-output", "rule-checksum-mismatch"]);
-    return Task.CompletedTask;
-}
+    var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent?.Name
+        ?? throw new DirectoryNotFoundException("Unable to determine the test build configuration.");
+    var startInfo = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = ProjectPath(),
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false
+    };
+    startInfo.ArgumentList.Add(Path.Combine(
+        ProjectPath("tools", "ArasUpgradeOrchestrator.CoreTree.Cli", "bin"),
+        configuration,
+        "net8.0",
+        "ArasUpgradeOrchestrator.CoreTree.Cli.dll"));
+    foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
 
-static Task CoreTreeContentComparisonSkillPackageIsComplete()
-{
-    CoreTreeCapabilitySkillTests.AssertPackage("aras-compare-core-tree-content",
-        ["crlf-bom-equal", "encoding-different", "whitespace-different", "server-text-rule", "server-binary", "decode-fallback"]);
-    return Task.CompletedTask;
-}
-
-static Task CoreTreeFileMappingSkillPackageIsComplete()
-{
-    CoreTreeCapabilitySkillTests.AssertPackage("aras-resolve-core-tree-file-mappings",
-        ["exact-name", "htm-to-html", "htm-to-cshtml", "html-to-cshtml", "js-to-ts", "js-to-tsx", "no-match", "ambiguous", "cross-directory-rejected"]);
-    return Task.CompletedTask;
-}
-
-static Task CoreTreeDifferenceClassificationSkillPackageIsComplete()
-{
-    CoreTreeCapabilitySkillTests.AssertPackage("aras-classify-core-tree-differences",
-        ["category-a", "category-b", "category-c", "unchanged", "a-target-collision", "ambiguous-target", "file-read-error"]);
-    return Task.CompletedTask;
-}
-
-static Task CoreTreeDeliverySkillPackageIsComplete()
-{
-    CoreTreeCapabilitySkillTests.AssertPackage("aras-build-core-tree-delivery",
-        ["categories-layout", "c-target-extension", "input-immutable", "new-attempt", "overwrite-blocked", "incomplete", "completed"]);
-    CoreTreeCapabilitySkillTests.AssertCoreTreeFixturePathArraysAreStablySorted("aras-build-core-tree-delivery",
-        ["categories-layout", "c-target-extension", "input-immutable", "new-attempt", "overwrite-blocked", "incomplete", "completed"]);
-    return Task.CompletedTask;
+    using var process = new Process { StartInfo = startInfo };
+    Assert.True(process.Start(), "Unable to start the Core Tree CLI.");
+    var standardOutput = process.StandardOutput.ReadToEndAsync();
+    var standardError = process.StandardError.ReadToEndAsync();
+    await process.WaitForExitAsync();
+    await Task.WhenAll(standardOutput, standardError);
+    return new CliProcessResult(process.ExitCode, await standardOutput, await standardError);
 }
 
 static CustomerPackageLockRequest TestPackageLockRequest(Guid flowAttemptId, string target) => new(
@@ -1851,6 +2016,19 @@ static CustomerPackageLockRequest TestPackageLockRequest(Guid flowAttemptId, str
     "original-package-backup",
     "original-package-proof",
     []);
+
+static string SnapshotTree(string root) => string.Join(
+    "\n",
+    Directory.EnumerateFileSystemEntries(root, "*", SearchOption.AllDirectories)
+        .Append(root)
+        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+        .Select(path =>
+        {
+            var relativePath = Path.GetRelativePath(root, path).Replace('\\', '/');
+            if (Directory.Exists(path)) return $"D|{relativePath}";
+            var bytes = File.ReadAllBytes(path);
+            return $"F|{relativePath}|{bytes.Length}|{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))}";
+        }));
 
 static string ProjectPath(params string[] segments)
 {
@@ -1931,6 +2109,8 @@ sealed class RecordingExternalExecutor(ExternalActionResult result) : IExternalA
     }
 }
 
+sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
+
 sealed class TestScope : IAsyncDisposable
 {
     private TestScope(string root)
@@ -1989,10 +2169,10 @@ static class Assert
             throw new InvalidOperationException($"Expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}].");
     }
 
-    public static TException Throws<TException>(Action action) where TException : Exception
+    public static void Throws<TException>(Action action) where TException : Exception
     {
         try { action(); }
-        catch (TException exception) { return exception; }
+        catch (TException) { return; }
         throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
     }
 

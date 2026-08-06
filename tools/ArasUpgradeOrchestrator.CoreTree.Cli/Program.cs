@@ -12,30 +12,54 @@ var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
 if (args is ["--help"] or ["-h"] or [])
 {
     Console.WriteLine("Core Tree offline test CLI");
-    Console.WriteLine("Usage: dotnet run --project tools/ArasUpgradeOrchestrator.CoreTree.Cli -- --request <request.json>");
-    Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist.");
+    Console.WriteLine("Usage: dotnet run --project tools/ArasUpgradeOrchestrator.CoreTree.Cli -- --preflight <request.json>");
+    Console.WriteLine("       dotnet run --project tools/ArasUpgradeOrchestrator.CoreTree.Cli -- --request <request.json>");
+    Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist for --request.");
     return 0;
 }
 
-if (args.Length != 2 || !string.Equals(args[0], "--request", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(args[1]))
+if (args is not ["--preflight" or "--request", var requestPath] || string.IsNullOrWhiteSpace(requestPath))
 {
-    Console.Error.WriteLine("Missing --request <request.json>. Use --help for usage.");
-    return 2;
+    Console.Error.WriteLine("Expected --preflight <request.json> or --request <request.json>. Use --help for usage.");
+    return 1;
 }
 
 try
 {
-    var json = await File.ReadAllTextAsync(args[1]);
+    var json = await File.ReadAllTextAsync(requestPath);
     var input = JsonSerializer.Deserialize<CliRequest>(json, jsonOptions)
         ?? throw new InvalidDataException("Request JSON is empty.");
+    var customer = new CoreTreeInputEvidence(input.CustomerRoot, input.SourceVersion, input.CustomerEvidence);
+    var sourceOotb = new CoreTreeInputEvidence(input.SourceOotbRoot, input.SourceVersion, input.SourceOotbEvidence);
+    var targetOotb = new CoreTreeInputEvidence(input.TargetOotbRoot, input.TargetVersion, input.TargetOotbEvidence);
+    var serverTextRules = CoreTreeServerTextRuleSet.Create(input.ServerRuleVersion, input.ServerRulePaths);
+
+    if (args[0] == "--preflight")
+    {
+        var preflightResult = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(new CoreTreeComparisonPreflightRequest(
+            input.CaseRoot,
+            customer,
+            sourceOotb,
+            targetOotb,
+            input.OutputRoot,
+            serverTextRules));
+        Console.WriteLine(JsonSerializer.Serialize(preflightResult, jsonOptions));
+        return preflightResult.Status switch
+        {
+            CoreTreePreflightStatus.Ready or CoreTreePreflightStatus.Incomplete => 0,
+            CoreTreePreflightStatus.Blocked => 2,
+            _ => 1
+        };
+    }
+
     var commandRequest = new CoreTreeComparisonCommandRequest(
         input.CaseRoot,
         input.Actor,
-        new CoreTreeInputEvidence(input.CustomerRoot, input.SourceVersion, input.CustomerEvidence),
-        new CoreTreeInputEvidence(input.SourceOotbRoot, input.SourceVersion, input.SourceOotbEvidence),
-        new CoreTreeInputEvidence(input.TargetOotbRoot, input.TargetVersion, input.TargetOotbEvidence),
+        customer,
+        sourceOotb,
+        targetOotb,
         input.OutputRoot,
-        CoreTreeServerTextRuleSet.Create(input.ServerRuleVersion, input.ServerRulePaths),
+        serverTextRules,
         input.RetryEvidence is null ? null : new RetryEvidence(input.RetryEvidence.Basis, input.RetryEvidence.EvidenceReference),
         input.Confirmation is null ? null : new ActionConfirmation(input.Confirmation.DecisionDigest, input.Confirmation.Actor, input.Confirmation.ConfirmedAt),
         input.Prerequisites);
