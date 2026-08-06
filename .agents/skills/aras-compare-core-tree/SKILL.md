@@ -14,7 +14,7 @@ description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、
 1. 讀取根層 `AGENTS.md`、`CONTEXT.md`、相關 ADR、`.scratch/aras-upgrade-orchestrator/spec.md` 第 4、5、6、14、17、18 節。
 2. 完整讀取 `docs/standards/AML_Structure_and_Traversal_Standard.md`、`docs/design/skill-map.md` 與 `references/core-capabilities.md`。Core Tree XML 不使用 Package AML 語意相等。
 3. 使用 `aras-manage-upgrade-case` 核對案件、來源／目標版本、新執行嘗試、輸出目錄、歷程及工作目錄鎖。
-4. 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。
+4. 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。使用者明確授權 `K:\70.ArasUpgradeCases\<case-id>` 時，僅可將該案件內的 `core-tree\inputs` 視為唯讀隔離測試輸入；只有正式、受測的 command/action 可在同一案件的 `core-tree\attempts` 建立新輸出，並由正式案件能力追加 execution history。
 
 ## 路由
 
@@ -43,7 +43,7 @@ description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、
 - 多候選不得猜測；維持人工確認並停止後續正式交付。
 - 不建立分類 D；不覆寫舊嘗試；輸出不得與任何輸入重疊。
 - 目前缺少 UI／CLI 及案件 command/action 時，實際客戶案件停止在正式執行介面邊界，不手工模擬持久化。
-- 不連接 DB、不啟動 Aras 工具、不操作正式 `Support`、`Solutions` 或 `K:`。
+- 不連接 DB、不啟動 Aras 工具，也不操作正式 `Support` 或 `Solutions`。`K:` 僅限使用者明確授權的 `K:\70.ArasUpgradeCases\<case-id>` 隔離案件範圍：三份 `core-tree\inputs` 與 evidence 必須唯讀；寫入只可由正式、受測的 command/action 建立於新的 `core-tree\attempts`，或由正式案件能力追加 `.orchestrator\history.jsonl`。不得讀寫其他 K: 路徑，且 command/action 缺失時不得以手工方式替代。
 
 ## 輸出
 

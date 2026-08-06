@@ -1,0 +1,186 @@
+<style>
+  .decision-banner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 18px 0 24px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, #26a269 35%, var(--border));
+    background: color-mix(in srgb, #26a269 9%, var(--surface));
+  }
+  .check {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #26a269;
+    color: white;
+    font-weight: 900;
+    flex: 0 0 auto;
+  }
+  .approach-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .approach {
+    position: relative;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .approach.recommended {
+    border: 2px solid #2f6fed;
+    background: color-mix(in srgb, #2f6fed 7%, var(--surface));
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--muted) 10%, var(--surface));
+  }
+  .recommended .badge { color: #2258bd; background: color-mix(in srgb, #2f6fed 13%, var(--surface)); }
+  .approach h3 { margin: 0 0 8px; }
+  .approach p { color: var(--muted); }
+  .mini-diagram {
+    display: grid;
+    gap: 7px;
+    margin: 16px 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--border) 24%, var(--surface));
+    font-size: 12px;
+    text-align: center;
+  }
+  .node {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    font-weight: 700;
+  }
+  .node.parent { border-color: #2f6fed; }
+  .node-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pros-cons div { padding: 9px; border-radius: 8px; font-size: 12px; }
+  .pros { background: color-mix(in srgb, #26a269 9%, var(--surface)); }
+  .cons { background: color-mix(in srgb, #c43e3e 8%, var(--surface)); }
+  .pros strong, .cons strong { display: block; margin-bottom: 4px; }
+  .comparison {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 26px;
+    font-size: 14px;
+  }
+  .comparison th, .comparison td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .comparison th { color: var(--muted); font-size: 12px; }
+  .best { color: #2258bd; font-weight: 800; }
+  .recommendation {
+    padding: 14px 16px;
+    border-left: 4px solid #2f6fed;
+    background: color-mix(in srgb, #2f6fed 8%, var(--surface));
+    margin-bottom: 24px;
+  }
+  @media (max-width: 950px) { .approach-grid { grid-template-columns: 1fr; } }
+</style>
+
+<h1>Core Tree 細項 Skill：三種落地架構</h1>
+<p class="subtitle">五個業務能力已確認。現在決定它們如何被發現、呼叫、維護，以及如何約束不同語言的實作。</p>
+
+<div class="decision-banner">
+  <span class="check">✓</span>
+  <div><strong>已確認：</strong>驗證輸入、判定內容差異、解析邏輯對應、分類 A／B／C、建立交付目錄。</div>
+</div>
+
+<div class="approach-grid">
+  <article class="approach">
+    <span class="badge">方案 1</span>
+    <h3>父 Skill 內的章節模組</h3>
+    <p>五項規格都放在 <code>aras-compare-core-tree</code> 的 references 內，不建立新的頂層 Skill。</p>
+    <div class="mini-diagram">
+      <div class="node parent">aras-compare-core-tree</div>
+      <div>↓ 內部 references</div>
+      <div class="node-row"><div class="node">能力 1</div><div class="node">能力 2</div><div class="node">能力 3–5</div></div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>優點</strong>檔案集中、頂層 Skill 數量少。</div>
+      <div class="cons"><strong>代價</strong>同事難以直接指定細項；AI 發現能力較弱。</div>
+    </div>
+  </article>
+
+  <article class="approach recommended">
+    <span class="badge">方案 2 · 建議</span>
+    <h3>五個獨立 Skill＋父 Skill 協調</h3>
+    <p>每項都是可直接呼叫的頂層 Skill，自有完整契約與驗收案例；父 Skill 只負責組合及狀態管理。</p>
+    <div class="mini-diagram">
+      <div class="node parent">aras-compare-core-tree</div>
+      <div>↓ 明確調用</div>
+      <div class="node-row"><div class="node">Skill 1</div><div class="node">Skill 2</div><div class="node">Skill 3–5</div></div>
+      <div>↓ 同一驗收契約</div>
+      <div class="node">C# ／ Python ／其他實作</div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>優點</strong>最符合直接呼叫、獨立維護與跨語言重建。</div>
+      <div class="cons"><strong>代價</strong>Skill 數量增加，需治理命名與共用詞彙。</div>
+    </div>
+  </article>
+
+  <article class="approach">
+    <span class="badge">方案 3</span>
+    <h3>一個能力入口＋模式參數</h3>
+    <p>新增一個 <code>core-tree-capabilities</code> Skill，以 mode 選擇五項能力；父 Skill 與同事都呼叫同一入口。</p>
+    <div class="mini-diagram">
+      <div class="node parent">aras-compare-core-tree</div>
+      <div>↓ mode=validate／map／classify…</div>
+      <div class="node">core-tree-capabilities</div>
+      <div>↓</div>
+      <div class="node">共用規格包</div>
+    </div>
+    <div class="pros-cons">
+      <div class="pros"><strong>優點</strong>入口少，共用資料結構容易集中。</div>
+      <div class="cons"><strong>代價</strong>單一 Skill 會逐漸變大，細項責任與維護界線較模糊。</div>
+    </div>
+  </article>
+</div>
+
+<table class="comparison">
+  <thead><tr><th>判斷面向</th><th>方案 1</th><th>方案 2</th><th>方案 3</th></tr></thead>
+  <tbody>
+    <tr><td>同事直接呼叫細項</td><td>較弱</td><td class="best">最清楚</td><td>需記住 mode</td></tr>
+    <tr><td>AI 發現及選擇能力</td><td>依賴父 Skill</td><td class="best">可由描述直接觸發</td><td>先找到入口再判斷模式</td></tr>
+    <tr><td>規格獨立維護</td><td>章節耦合</td><td class="best">責任界線明確</td><td>集中但容易膨脹</td></tr>
+    <tr><td>跨語言重建實作</td><td>可行</td><td class="best">每項均有獨立驗收契約</td><td>可行但驗收範圍較大</td></tr>
+    <tr><td>治理成本</td><td class="best">最低</td><td>需管理較多 Skill</td><td>中等</td></tr>
+  </tbody>
+</table>
+
+<div class="recommendation">
+  <strong>我的建議：方案 2。</strong>
+  它直接落實您的核心要求：Skill 是公司可維護的業務規格與驗收來源，而 C#、Python 等只是可以替換的實作。增加的 Skill 數量可透過固定命名、共用術語與父 Skill 路由控制。
+</div>
+
+<h2>請選擇落地架構</h2>
+<div class="options">
+  <div class="option" data-choice="approach-1-parent-references" onclick="toggleSelect(this)">
+    <div class="letter">1</div><div class="content"><h3>父 Skill 內的章節模組</h3><p>重視集中管理，不要求每項成為可發現的獨立 Skill。</p></div>
+  </div>
+  <div class="option" data-choice="approach-2-independent-skills" onclick="toggleSelect(this)">
+    <div class="letter">2</div><div class="content"><h3>五個獨立 Skill＋父 Skill 協調（建議）</h3><p>直接呼叫、單一責任、獨立驗收、跨語言重建。</p></div>
+  </div>
+  <div class="option" data-choice="approach-3-mode-dispatch" onclick="toggleSelect(this)">
+    <div class="letter">3</div><div class="content"><h3>一個能力入口＋模式參數</h3><p>控制入口數量，以 mode 選擇能力。</p></div>
+  </div>
+</div>

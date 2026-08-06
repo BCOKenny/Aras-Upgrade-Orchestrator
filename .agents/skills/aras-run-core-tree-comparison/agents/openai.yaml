@@ -1,4 +1,4 @@
 interface:
-  display_name: "åŸ·è¡Œ Core Tree æ¯”è¼ƒ"
-  short_description: "ä¾æ¡ˆä»¶é—œå¡å»ºç«‹ä¸¦è¿½è¹¤ Core Tree æ¯”è¼ƒå˜—è©¦"
-  default_prompt: "ä½¿ç”¨ $aras-run-core-tree-comparison åŸ·è¡ŒæŒ‡å®šæ¡ˆä»¶çš„ Core Tree æ¯”è¼ƒå‰ç½®æª¢æŸ¥èˆ‡å—æ§å˜—è©¦ã€‚"
+  display_name: "°õ¦æ Core Tree ¤ñ¸û"
+  short_description: "¥H©T©w®×¥ó³]©w°õ¦æ Core Tree «e¸mÀË¬d»P¤ñ¸û¡C"
+  default_prompt: "Use $aras-run-core-tree-comparison to perform the Core Tree preflight checks for Customer1209-To-R38."

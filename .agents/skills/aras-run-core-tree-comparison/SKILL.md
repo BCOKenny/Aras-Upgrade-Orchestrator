@@ -1,54 +1,51 @@
 ---
 name: aras-run-core-tree-comparison
-description: Use when Codex needs to start or inspect a controlled Core Tree comparison attempt for a known Aras upgrade case, including case/version validation, immutable snapshot, retry safety, directory lease, history, and a fixed result; stop when the formal CoreTreeComparisonCommand/action is unavailable.
+description: Use when Codex 需要從簡短要求執行或準備可重複的 Customer1209-To-R38 Core Tree 比較流程，包括前置檢查、A／B／C 比較、安全建立 attempt 及不可變案件歷程。適用於固定案件 K:\70.ArasUpgradeCases\Customer1209-To-R38 的「執行 Core Tree 前置檢查」或「執行 Core Tree 比較」等要求。
 ---
 
-# Run Core Tree Comparison
+# 執行 Customer1209-To-R38 Core Tree 比較
 
-## Goal
+只對以下固定案件根目錄使用此 Skill：
 
-Coordinate one case-bound Core Tree comparison attempt. This Skill owns the execution boundary; `aras-compare-core-tree` owns comparison rules and classification. It does not merge, modify, or release the R38 Core Tree, and it never generates a program while running.
+`K:\70.ArasUpgradeCases\Customer1209-To-R38`
 
-## Required reading
+## 解讀簡短要求
 
-Before any attempt, read `AGENTS.md`, `CONTEXT.md`, the relevant ADRs, `.scratch/aras-upgrade-orchestrator/spec.md` sections 14, 17, and 18, `docs/design/skill-map.md`, `docs/standards/AML_Structure_and_Traversal_Standard.md`, `aras-manage-upgrade-case`, and `aras-compare-core-tree`. Use `references/core-capabilities.md` as the dependency map.
+- 收到 `執行前置檢查` 時，只執行 preflight checks；不得建立 attempt 目錄或比較輸出。
+- 收到 `執行比較` 時，先執行 preflight checks；只有正式 Core Tree 工作流程允許時才繼續。
+- 收到 `列出阻擋原因` 或 `檢查狀態` 時，只讀取並回報；不得修改案件。
+- 除非使用者明確要求另一項獨立工作，否則不得修改來源 tree、evidence、R38、database、Aras tool 或程式碼。
 
-## Fixed execution procedure
+## 依序路由
 
-1. Read the case manifest and its Core Tree settings. Do not infer settings from a folder name or chat text.
-2. Validate the case identifier, source/target versions, the three input roots, version evidence, and fixed Server text rules. A missing or mismatched input blocks the attempt.
-3. Create an immutable 執行快照 containing case, task, action, route/version, target, input paths, tool identity, and checksums. 快照不可覆寫；a new attempt must not overwrite an older snapshot.
-4. Create a 新的執行嘗試. Treat an unfinished prior attempt as `Interrupted`; retry only when the case store records the required evidence and retry safety conditions.
-5. Apply the safety policy and acquire a `DirectoryLeaseManager` lease before reading/writing outputs. Overlapping roots, unsafe paths, or an existing lease block the attempt.
-6. Require the formal command/action (`CoreTreeComparisonCommand`). If the 正式 command/action is unavailable, stop with `Blocked` and record why. Do not call `CoreTreeComparisonBuilder` directly to bypass the case gate; the formal command is responsible for invoking the builder.
-7. Append start, result, interruption, or error events to the append-only case history (`history.jsonl`). Never edit or delete an existing event; corrections are new events.
-8. Return the fixed result contract: case ID, attempt ID, source/target versions, status, A/B/C counts, output path, manual-review items, evidence paths, and errors. `Completed` is valid only when the builder proves all required inputs and review conditions; otherwise return `Incomplete` or `Blocked`.
+1. 使用 `$aras-innovator-upgrade` 識別目前階段及適用關卡。
+2. 使用 `$aras-manage-upgrade-case` 讀取案件身分、執行歷程、retry eligibility、directory lock 及預定的新 attempt 路徑。
+3. 使用 `$aras-compare-core-tree` 驗證輸入；只有在獲准時，才執行比較及 A／B／C 分類。
+4. 再次使用 `$aras-manage-upgrade-case` 追加不可變執行歷程。不得手動編輯歷程或自行建立 `Completed`。
 
-## Current boundary
+## 固定輸入
 
-The formal `CoreTreeComparisonCommand` and offline test CLI now exist. The command performs the case load, evidence/version validation, immutable snapshot, SafetyPolicy decision, command lease, attempt lifecycle, Builder call, append-only history, and fixed result model. The CLI is deliberately offline: real customer, DB, Aras Export, login, upgrade-tool, UI, and external adapters remain unavailable. If the command/action is absent or the command receives an unsafe or mismatched request, it must return `Blocked`; the Skill never generates the missing implementation at runtime.
-
-## Stop conditions
-
-- case identity, route, version evidence, or one of the three inputs is missing or inconsistent;
-- a snapshot would overwrite an existing snapshot or an attempt would reuse an attempt ID;
-- the safety policy rejects the path, lease, action, or external boundary;
-- the formal command/action is missing, unregistered, or does not match the snapshot;
-- manual review, binary comparison limitations, or missing evidence prevents `Completed`.
-
-## Security rules
-
-- Never access a real customer, DB, Aras Export, login session, upgrade tool, or any path outside an explicitly authorized `K:\70.ArasUpgradeCases\<case-id>` isolated case. Within that case, inputs and evidence are read-only; only `CoreTreeComparisonCommand` may create a new attempt output and append history.
-- Never change R38 Core Tree files, merge customer content, or mark `Completed` by judgment.
-- Never overwrite inputs, snapshots, attempts, history, or prior output. New attempts use new directories.
-- AI may explain a blocked result and prepare a checklist, but不得自動產生 missing command/action or authorize an external operation.
-
-## Common mistakes
-
-| Mistake | Correct response |
+| 角色 | 路徑 |
 |---|---|
-| Treating `CoreTreeComparisonBuilder` as a command | Stop until `CoreTreeComparisonCommand` is formally registered. |
-| Generating executable code from the Skill | Report the missing implementation; do not generate or run it. |
-| Editing `history.jsonl` to repair a result | Append a correction event with the original event ID. |
-| Reusing an interrupted attempt directory | Create a new attempt only after retry evidence is recorded. |
-| Calling a local core test a customer execution | Label it as an isolated test fixture, not case evidence. |
+| CustomerSource | `core-tree\inputs\customer-12sp9\tree` |
+| OOTBSource | `core-tree\inputs\ootb-12sp9\tree` |
+| OOTBR38 | `core-tree\inputs\ootb-r38\tree` |
+| Customer evidence | `core-tree\inputs\customer-12sp9\evidence` |
+| OOTB 12SP9 evidence | `core-tree\inputs\ootb-12sp9\evidence` |
+| OOTB R38 evidence | `core-tree\inputs\ootb-r38\evidence` |
+| 新 attempt 的上層目錄 | `core-tree\attempts` |
+
+所有相對路徑都必須以固定案件根目錄解析。將三份輸入 tree 視為不可變，並拒絕任何輸入與輸出路徑重疊的情況。
+
+## 不可妥協的控制條件
+
+- 使用正式且已受測的 Core Tree command/action；不得手動模擬比較。
+- 不得從目錄名稱推測版本。
+- 不得預先建立、重用或覆寫 attempt 目錄。
+- 遇到多個 R38 candidate 時不得猜測；保留所有 candidate 等待人工確認。
+- 遵循 `$aras-compare-core-tree` 及其路由子 Skill 提供的文字／binary 比較與副檔名演進規則。
+- 只允許正式工作流程判定 `Incomplete` 或 `Completed`；未解決的人工確認不得自動解除。
+
+## 回報
+
+一律說明目前路由的 Skill、案件根目錄、預定的 attempt 路徑與 lock、已完成關卡、阻擋原因，以及是否發生任何寫入。

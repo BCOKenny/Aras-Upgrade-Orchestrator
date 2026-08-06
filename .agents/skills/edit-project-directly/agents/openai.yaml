@@ -1,0 +1,4 @@
+interface:
+  display_name: "直接編輯目前專案"
+  short_description: "在目前專案直接修改檔案並遵守繁體中文文件與工具執行限制"
+  default_prompt: "Use $edit-project-directly before changing files or project documentation in this project."

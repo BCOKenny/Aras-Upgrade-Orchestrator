@@ -1,5 +1,13 @@
 ## Agent skills
 
+### Project-local editing policy
+
+在本專案建立、修改、搬移或刪除任何檔案前，必須先讀取並遵守：
+
+- `.agents/skills/edit-project-directly/SKILL.md`
+
+此 Skill 是本機編輯限制與文件語言政策的 single source of truth；其規則優先於其他 Skill 中衝突的工作流程步驟。
+
 ### Issue tracker
 
 Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
