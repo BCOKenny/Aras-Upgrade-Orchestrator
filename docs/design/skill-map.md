@@ -73,3 +73,4 @@ flowchart TD
 - 4E Package 整合測試：已串接一次性客戶 Package 基準、固定規則快照、Rule 1 ZIP 與 Rule 2 適配流程，驗證完整成功、跳點身分不一致、封裝竄改及人工確認阻擋行為。
 - Core Tree、跳點與交付：正式程式能力與對應功能 Skill 同步建立，不先建立沒有受測執行能力的空殼 Skill。
 - 整合驗收：以主 Skill 路由情境及每個功能 Skill 的成功、錯誤、證據不足、未授權與中斷情境分別驗證。
+Phase 5 Core Tree execution uses `aras-run-core-tree-comparison` as the case-bound entry Skill. It invokes read-only `CoreTreeComparisonPreflightCommand` through CLI `--preflight` before any write-capable comparison command; preflight never creates attempt, lock, history, output, or `Completed`.

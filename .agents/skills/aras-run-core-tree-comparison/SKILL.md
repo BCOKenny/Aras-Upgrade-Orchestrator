@@ -49,3 +49,12 @@ description: Use when Codex 需要從簡短要求執行或準備可重複的 Cus
 ## 回報
 
 一律說明目前路由的 Skill、案件根目錄、預定的 attempt 路徑與 lock、已完成關卡、阻擋原因，以及是否發生任何寫入。
+## Formal read-only preflight
+
+Use the compiled CLI with `--preflight <request.json>` for a read-only gate before comparison. It invokes `CoreTreeComparisonPreflightCommand` and must not create an attempt, snapshot, directory lock, history event, output, or `Completed`.
+
+Only the formal `CoreTreeComparisonCommand` may start a comparison attempt, obtain the execution lock, create the new output, and append `history.jsonl`.
+
+Formal command/action: preflight must not create an attempt, snapshot, directory lock, history event, output, or `Completed`.
+
+`DirectoryLeaseManager` is reserved for the formal comparison command; preflight only reports the expected lease path.

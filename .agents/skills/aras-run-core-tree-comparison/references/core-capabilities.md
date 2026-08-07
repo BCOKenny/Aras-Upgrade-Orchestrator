@@ -12,3 +12,9 @@ This Skill coordinates the case boundary; it does not replace the formal core im
 | Formal entry point | `CoreTreeComparisonCommand` | Established command/action that binds the case snapshot and invokes the builder. It returns a fixed result model; the offline CLI is the test adapter. |
 
 The formal command/action and offline CLI are present. UI and external Aras/DB adapters are not present. Core-only tests and the CLI use isolated fixtures and do not constitute a customer execution.
+## Read-only preflight capability
+
+| Capability | Contract |
+|---|---|
+| `CoreTreeComparisonPreflightCommand` | Read-only validation of the case manifest, three input roots, evidence quality, Client/Server structure, versions, rule checksum, path isolation, file counts, and last history event. Returns `Ready`, `Incomplete`, or `Blocked`; never creates attempt, snapshot, lock, history, output, or `Completed`. |
+| CLI `--preflight <request.json>` | Direct compiled-DLL adapter. Exit `0` means `Ready`/`Incomplete`, `2` means `Blocked`, and `1` means malformed request or CLI error. |

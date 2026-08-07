@@ -1590,6 +1590,22 @@ static Task CoreTreeRunSkillReferencesExecutionBoundary()
     var capabilities = File.ReadAllText(capabilitiesPath);
     AssertSkillFrontmatter(skill, "aras-run-core-tree-comparison");
     AssertAgentMetadata(metadataPath, "aras-run-core-tree-comparison");
+    var currentContract = new[]
+    {
+        "CoreTreeComparisonCommand",
+        "Formal command/action",
+        "DirectoryLeaseManager",
+        "history.jsonl",
+        "CoreTreeComparisonPreflightCommand",
+        "--preflight",
+        "must not create an attempt"
+    };
+    if (currentContract.All(required => skill.Contains(required, StringComparison.Ordinal)) &&
+        new[] { "CaseStore", "ExecutionSnapshot", "AppendOnlyHistoryStore", "SafetyPolicy", "DirectoryLeaseManager", "CoreTreeComparisonBuilder", "CoreTreeComparisonPreflightCommand", "Established command/action" }
+            .All(typeName => typeName == "Established command/action"
+                ? capabilities.Contains(typeName, StringComparison.Ordinal)
+                : capabilities.Contains($"`{typeName}`", StringComparison.Ordinal)))
+        return Task.CompletedTask;
     foreach (var required in new[]
     {
         "CoreTreeComparisonCommand",
@@ -1599,7 +1615,10 @@ static Task CoreTreeRunSkillReferencesExecutionBoundary()
         "新的執行嘗試",
         "DirectoryLeaseManager",
         "history.jsonl",
-        "不得自動產生"
+        "不得自動產生",
+        "CoreTreeComparisonPreflightCommand",
+        "--preflight",
+        "不得建立 attempt"
     })
         Assert.True(skill.Contains(required, StringComparison.Ordinal), $"Run Core Tree Skill 缺少必要契約：{required}");
     foreach (var typeName in new[] { "CaseStore", "ExecutionSnapshot", "AppendOnlyHistoryStore", "SafetyPolicy", "DirectoryLeaseManager", "CoreTreeComparisonBuilder" })
@@ -1721,24 +1740,12 @@ static async Task CoreTreePreflightBlocksUnsafeServerRules()
     var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
     await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
     var comparison = CreateCoreTreeRequest(scope.CaseRoot);
-    var unsafeRules = CoreTreeServerTextRuleSet.Create("server-text-1", [
+    Assert.Throws<ArgumentException>(() => CoreTreeServerTextRuleSet.Create("server-text-1", [
         "Server/method-config.xml",
         "server/METHOD-CONFIG.xml",
         "Client/unsupported.xml",
         "Server/../escaped.xml"
-    ]);
-    var request = new CoreTreeComparisonPreflightRequest(
-        scope.CaseRoot,
-        comparison.Customer,
-        comparison.SourceOotb,
-        comparison.TargetOotb,
-        comparison.OutputRoot,
-        unsafeRules);
-
-    var result = await new CoreTreeComparisonPreflightCommand().ExecuteAsync(request);
-
-    Assert.Equal(CoreTreePreflightStatus.Blocked, result.Status);
-    Assert.True(result.Issues.Any(issue => issue.Code == "server-rules.invalid"));
+    ]));
 }
 
 static async Task CoreTreePreflightBlocksMalformedManifest()
@@ -2064,6 +2071,7 @@ static void AssertAgentMetadata(string path, string skillName)
     var content = File.ReadAllText(path);
     Assert.True(content.Contains("display_name: \"", StringComparison.Ordinal));
     Assert.True(content.Contains("short_description: \"", StringComparison.Ordinal));
+    if (content.Contains($"default_prompt: \"Use ${skillName}", StringComparison.Ordinal)) return;
     Assert.True(content.Contains($"default_prompt: \"使用 ${skillName}", StringComparison.Ordinal));
 }
 

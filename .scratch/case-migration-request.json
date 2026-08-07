@@ -1,0 +1,19 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38",
+  "legacyManifest": "aras-upgrade-case.json",
+  "newCaseId": "761aae66-84c9-437c-9a3d-709226a382e8",
+  "customerCode": "LacquerCraft",
+  "sourceVersion": "12.0 SP9 Build 12.0.0.24090",
+  "targetVersion": "15.0 SP1 Build 15.0.1.0",
+  "routeVersion": 1,
+  "hops": [
+    {
+      "sourceVersion": "12.0 SP9 Build 12.0.0.24090",
+      "targetVersion": "15.0 SP1 Build 15.0.1.0",
+      "supportDirectory": ""
+    }
+  ],
+  "actor": "BCO\\kenny",
+  "requestedAt": "2026-08-056T14:30:00+08:00",
+  "confirmation": "BCO\\kenny 已確認案件識別、Customer 12SP9 來源版本、OOTB R38 目標版本、12SP9→R38 路徑及 SupportDirectory；待正式程式驗證證據後執行。"
+}
