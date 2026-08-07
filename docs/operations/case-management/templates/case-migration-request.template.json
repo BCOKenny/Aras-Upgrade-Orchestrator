@@ -1,0 +1,19 @@
+{
+  "caseRoot": "C:\\controlled-cases\\example-case",
+  "legacyManifest": "aras-upgrade-case.json",
+  "newCaseId": "00000000-0000-0000-0000-000000000000",
+  "customerCode": "EXAMPLE-CUSTOMER",
+  "sourceVersion": "SOURCE-VERSION",
+  "targetVersion": "TARGET-VERSION",
+  "routeVersion": 1,
+  "hops": [
+    {
+      "sourceVersion": "SOURCE-VERSION",
+      "targetVersion": "TARGET-VERSION",
+      "supportDirectory": "C:\\Aras\\TARGET-VERSION\\Support"
+    }
+  ],
+  "actor": "DOMAIN\\operator",
+  "requestedAt": "2026-08-06T14:30:00+08:00",
+  "confirmation": "\\u78ba\\u8a8d\\u7d00\\u9304\\u4f4d\\u7f6e"
+}

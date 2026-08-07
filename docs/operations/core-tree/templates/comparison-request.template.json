@@ -1,0 +1,19 @@
+{
+  "caseRoot": "C:\\controlled-cases\\example-case",
+  "actor": "DOMAIN\\operator",
+  "sourceVersion": "SOURCE-VERSION",
+  "targetVersion": "TARGET-VERSION",
+  "customerRoot": "C:\\controlled-inputs\\customer",
+  "customerEvidence": "C:\\controlled-inputs\\customer\\evidence",
+  "sourceOotbRoot": "C:\\controlled-inputs\\source-ootb",
+  "sourceOotbEvidence": "C:\\controlled-inputs\\source-ootb\\evidence",
+  "targetOotbRoot": "C:\\controlled-inputs\\target-ootb",
+  "targetOotbEvidence": "C:\\controlled-inputs\\target-ootb\\evidence",
+  "outputRoot": "C:\\controlled-output\\core-tree",
+  "serverRuleVersion": "RULE-VERSION",
+  "serverRulePaths": ["Server/ExampleRule.cs"],
+  "safetyWhitelist": ["C:\\controlled-output\\core-tree"],
+  "prerequisites": ["PRE-FLIGHT-RESULT-REFERENCE"],
+  "retryEvidence": [],
+  "confirmation": "HUMAN-CONFIRMATION-REFERENCE"
+}
