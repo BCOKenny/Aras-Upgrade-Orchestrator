@@ -10,7 +10,7 @@
     {
       "sourceVersion": "SOURCE-VERSION",
       "targetVersion": "TARGET-VERSION",
-      "supportDirectory": "C:\\Aras\\TARGET-VERSION\\Support"
+      "supportDirectory": ""
     }
   ],
   "actor": "DOMAIN\\operator",

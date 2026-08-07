@@ -20,7 +20,7 @@ dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgrade
 
 ## 3. 執行比較
 
-1. 僅在 Preflight 回傳 `Ready` 後，複製並填寫 `comparison-request.template.json`。
+1. 僅在 Preflight 回傳 `Ready` 後，複製並填寫 `comparison-request.template.json`；`Incomplete` 或 `Blocked` 均不得進入正式比較。
 2. 填入真實 `actor`、明確 `safetyWhitelist`、前置證據、適用時的 retry evidence 與人工確認參考。
 3. 執行 command：
 

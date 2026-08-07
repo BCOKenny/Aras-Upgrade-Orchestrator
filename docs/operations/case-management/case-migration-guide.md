@@ -16,5 +16,6 @@
 
 - `sourceVersion` 與 `targetVersion` 必須與正式 case manifest 及 Core Tree input evidence 一致。
 - 每個 hop 必須有非空白的 `supportDirectory` 證據參考。
+- 範本中的 `supportDirectory` 故意留空；只有已核准、存在且唯讀的 Support 目錄才能填入。不得依版本名稱猜測路徑或自行建立 Support 目錄。
 - 案件遷移申請不可取代 case manifest 或 CLI request JSON。
 - 本文件不授權 DB、Aras Export、Support/Solutions 或正式 Core Tree 操作。

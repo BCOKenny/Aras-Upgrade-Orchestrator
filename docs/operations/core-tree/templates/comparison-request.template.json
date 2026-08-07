@@ -12,8 +12,22 @@
   "outputRoot": "C:\\controlled-output\\core-tree",
   "serverRuleVersion": "RULE-VERSION",
   "serverRulePaths": ["Server/ExampleRule.cs"],
-  "safetyWhitelist": ["C:\\controlled-output\\core-tree"],
-  "prerequisites": ["PRE-FLIGHT-RESULT-REFERENCE"],
-  "retryEvidence": [],
-  "confirmation": "HUMAN-CONFIRMATION-REFERENCE"
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.compare",
+      "actionVersion": "1",
+      "allowedTargetRoots": ["C:\\controlled-output\\core-tree"],
+      "requiredPrerequisites": ["case.loaded", "inputs.valid"],
+      "requiredInputDigest": null
+    }
+  ],
+  "prerequisites": {
+    "preflight.ready": true
+  },
+  "retryEvidence": null,
+  "confirmation": {
+    "decisionDigest": "HUMAN-CONFIRMATION-DIGEST",
+    "actor": "DOMAIN\\operator",
+    "confirmedAt": "2026-08-06T14:30:00+08:00"
+  }
 }
