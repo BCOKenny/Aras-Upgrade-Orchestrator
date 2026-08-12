@@ -8,6 +8,7 @@ public enum TaskGateState
     WaitingForDependencies,
     Running,
     Completed,
+    Incomplete,
     Failed,
     Interrupted
 }
@@ -23,6 +24,7 @@ public sealed class TaskGate
             {
                 AttemptState.Running => TaskGateState.Running,
                 AttemptState.Succeeded => TaskGateState.Completed,
+                AttemptState.Incomplete => TaskGateState.Incomplete,
                 AttemptState.Failed => TaskGateState.Failed,
                 AttemptState.Interrupted => TaskGateState.Interrupted,
                 _ => throw new ArgumentOutOfRangeException()

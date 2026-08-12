@@ -134,12 +134,24 @@ public sealed class CoreTreeComparisonCommand
         {
         var attempts = new ExecutionAttemptService(manifest.CaseId, history, _clock);
         await attempts.RecoverInterruptedAsync(commandRequest.Actor, cancellationToken);
-        var attempt = await attempts.StartAsync(snapshot with { ActionVersion = ActionVersion }, commandRequest.Actor, commandRequest.RetryEvidence, cancellationToken);
+        AttemptView attempt;
+        try
+        {
+            attempt = await attempts.StartAsync(snapshot with { ActionVersion = ActionVersion }, commandRequest.Actor, commandRequest.RetryEvidence, cancellationToken);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return await BlockedAsync(manifest.CaseId, CoreTreeComparisonCommandStatus.Blocked, SafetyLevel.Blocked, exception.Message, snapshotDigest, commandRequest.OutputRoot, history, commandRequest.Actor, cancellationToken);
+        }
         comparisonRequest = comparisonRequest with { AttemptId = attempt.AttemptId };
         try
         {
             var comparison = await CoreTreeComparisonBuilder.BuildAsync(comparisonRequest, leaseManager, _clock, cancellationToken);
-            await attempts.SucceedAsync(attempt, commandRequest.Actor, Path.Combine(commandRequest.OutputRoot, comparison.Status == CoreTreeComparisonStatus.Completed ? "completion-manifest.json" : "incomplete-manifest.json"), cancellationToken);
+            var resultManifest = Path.Combine(commandRequest.OutputRoot, comparison.Status == CoreTreeComparisonStatus.Completed ? "completion-manifest.json" : "incomplete-manifest.json");
+            if (comparison.Status == CoreTreeComparisonStatus.Completed)
+                await attempts.SucceedAsync(attempt, commandRequest.Actor, resultManifest, cancellationToken);
+            else
+                await attempts.IncompleteAsync(attempt, commandRequest.Actor, resultManifest, cancellationToken);
             return CreateResult(manifest.CaseId, attempt.AttemptId, comparison, decision.Level, snapshotDigest, history.Path, string.Empty);
         }
         catch (OperationCanceledException exception)

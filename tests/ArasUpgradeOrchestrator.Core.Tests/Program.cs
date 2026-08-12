@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
@@ -17,6 +18,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("既有升級路徑只能追加新版不能改寫", ExistingRouteCannotBeRewritten),
     ("歷程只追加且更正保留原事件", HistoryIsAppendOnly),
     ("失敗後無安全證據不得重試", RetryRequiresEvidence),
+    ("Incomplete attempt 只允許 VerifiedIdempotency 建立新 attempt", IncompleteRetryRequiresVerifiedIdempotency),
+    ("Completed attempt 即使提供 retry evidence 仍禁止重跑", CompletedAttemptCannotRetry),
+    ("舊 Core Tree incomplete-manifest 歷程可安全重試", LegacyCoreTreeIncompleteHistoryIsRetryable),
     ("重新開啟案件將未完成嘗試標記中斷", RecoveryMarksInterrupted),
     ("安全白名單與必要條件產生三級判定", SafetyPolicyUsesThreeLevels),
     ("目錄鎖阻擋重疊並允許獨立目錄", DirectoryLeasePreventsOverlap),
@@ -81,7 +85,13 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree execution Skill contract", CoreTreeRunSkillReferencesExecutionBoundary)
     ,("Core Tree command 協調案件、快照、鎖、Builder 與歷程", CoreTreeCommandCoordinatesCase)
+    ,("Core Tree command 將 Incomplete 寫入歷程並以新目錄重試", CoreTreeCommandRecordsIncompleteAndAllowsFreshRetry)
     ,("Core Tree command 未通過 SafetyPolicy 時阻擋且不建立嘗試", CoreTreeCommandBlocksUnsafeAction)
+    ,("Core Tree 人工確認核准只接受完全相符登錄並保存不可覆寫收據", CoreTreeManualReviewApprovalIsControlled)
+    ,("Core Tree 完成判定驗證核准證據並建立新完成收據", CoreTreeFinalizationCreatesIndependentReceipt)
+    ,("Core Tree 完成判定阻擋核准後遭修改的 review", CoreTreeFinalizationBlocksTamperedReview)
+    ,("Core Tree 完成判定拒絕既有輸出目錄", CoreTreeFinalizationRequiresNewOutput)
+    ,("Core Tree 完成判定拒絕同一 attempt 重複完成", CoreTreeFinalizationIsPermanent)
     ,("Core Tree preflight 僅讀取案件並回報可執行條件", CoreTreePreflightReadsCaseWithoutMutation)
     ,("Core Tree preflight 阻擋 checksum 有效但不安全的 Server 規則", CoreTreePreflightBlocksUnsafeServerRules)
     ,("Core Tree preflight 將損毀案件 manifest 轉為阻擋結果", CoreTreePreflightBlocksMalformedManifest)
@@ -214,6 +224,55 @@ static async Task RetryRequiresEvidence()
 
     await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(snapshot, "operator"));
     var second = await service.StartAsync(snapshot, "operator", new RetryEvidence(RetryBasis.RolledBack, "rollback-proof-1"));
+    Assert.Equal(2, second.Sequence);
+    Assert.NotEqual(first.AttemptId, second.AttemptId);
+}
+
+static async Task IncompleteRetryRequiresVerifiedIdempotency()
+{
+    await using var scope = TestScope.Create();
+    var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
+    var service = new ExecutionAttemptService(Guid.NewGuid(), history);
+    var snapshot = TestSnapshot("task.incomplete", scope.Root);
+    var first = await service.StartAsync(snapshot, "operator");
+    await service.IncompleteAsync(first, "operator", "incomplete-manifest.json");
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(snapshot, "operator"));
+    await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(
+        snapshot, "operator", new RetryEvidence(RetryBasis.RolledBack, "rollback-proof")));
+
+    var second = await service.StartAsync(
+        snapshot, "operator", new RetryEvidence(RetryBasis.VerifiedIdempotency, "retry-proof"));
+    Assert.Equal(2, second.Sequence);
+    Assert.NotEqual(first.AttemptId, second.AttemptId);
+}
+
+static async Task CompletedAttemptCannotRetry()
+{
+    await using var scope = TestScope.Create();
+    var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
+    var service = new ExecutionAttemptService(Guid.NewGuid(), history);
+    var snapshot = TestSnapshot("task.completed", scope.Root);
+    var first = await service.StartAsync(snapshot, "operator");
+    await service.SucceedAsync(first, "operator", "completion-manifest.json");
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(
+        snapshot, "operator", new RetryEvidence(RetryBasis.VerifiedIdempotency, "retry-proof")));
+}
+
+static async Task LegacyCoreTreeIncompleteHistoryIsRetryable()
+{
+    await using var scope = TestScope.Create();
+    var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
+    var service = new ExecutionAttemptService(Guid.NewGuid(), history);
+    var snapshot = TestSnapshot(CoreTreeComparisonCommand.TaskId, scope.Root);
+    var first = await service.StartAsync(snapshot, "operator");
+    await service.SucceedAsync(first, "operator", Path.Combine(scope.Root, "attempt-001", "incomplete-manifest.json"));
+
+    var legacy = (await service.GetAttemptsAsync(CoreTreeComparisonCommand.TaskId)).Single();
+    Assert.Equal(AttemptState.Incomplete, legacy.State);
+    var second = await service.StartAsync(
+        snapshot, "operator", new RetryEvidence(RetryBasis.VerifiedIdempotency, "retry-proof"));
     Assert.Equal(2, second.Sequence);
     Assert.NotEqual(first.AttemptId, second.AttemptId);
 }
@@ -1548,6 +1607,10 @@ static async Task CoreTreeBuilderBlocksIncompleteAndOverwrite()
 
     Assert.Equal(CoreTreeComparisonStatus.Incomplete, result.Status);
     Assert.True(File.Exists(Path.Combine(request.OutputRoot, "manual-reviews.json")));
+    var register = await File.ReadAllTextAsync(Path.Combine(request.OutputRoot, "manual-review-register.md"));
+    Assert.True(register.Contains("MR-001", StringComparison.Ordinal) &&
+        register.Contains(result.ManualReviews[0].Code, StringComparison.Ordinal) &&
+        register.Contains("Open", StringComparison.Ordinal), register);
     Assert.True(File.Exists(Path.Combine(request.OutputRoot, "incomplete-manifest.json")));
     Assert.False(File.Exists(Path.Combine(request.OutputRoot, "completion-manifest.json")));
     Assert.False(Directory.Exists(Path.Combine(request.OutputRoot, "C")));
@@ -1659,6 +1722,60 @@ static async Task CoreTreeCommandCoordinatesCase()
     Assert.Equal(2, history.Count);
     Assert.Equal(HistoryEventTypes.AttemptStarted, history[0].EventType);
     Assert.Equal(HistoryEventTypes.AttemptSucceeded, history[1].EventType);
+
+    var retryOutput = Path.Combine(scope.CaseRoot, "core-tree-output-retry");
+    var retry = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot,
+        "operator",
+        request.Customer,
+        request.SourceOotb,
+        request.TargetOotb,
+        retryOutput,
+        request.ServerTextRules,
+        new RetryEvidence(RetryBasis.VerifiedIdempotency, "retry-evidence.md")));
+    Assert.Equal(CoreTreeComparisonCommandStatus.Blocked, retry.CommandStatus);
+    Assert.Equal(Guid.Empty, retry.AttemptId);
+    Assert.False(Directory.Exists(retryOutput));
+}
+
+static async Task CoreTreeCommandRecordsIncompleteAndAllowsFreshRetry()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    var caseStore = new CaseStore(scope.CaseRoot);
+    await caseStore.CreateAsync(manifest);
+    var comparison = CreateCoreTreeRequest(scope.Root);
+    var customer = Path.Combine(comparison.Customer.RootPath, "Innovator");
+    var source = Path.Combine(comparison.SourceOotb.RootPath, "Innovator");
+    var target = Path.Combine(comparison.TargetOotb.RootPath, "Innovator");
+    await WriteCoreTreeFile(customer, "Client/app.js", "customer");
+    await WriteCoreTreeFile(source, "Client/app.js", "source");
+    await WriteCoreTreeFile(target, "Client/app.ts", "target");
+    await WriteCoreTreeFile(target, "Client/app.tsx", "target");
+    var policy = new SafetyPolicy([
+        new SafetyWhitelistEntry("core-tree.compare", "1", [scope.CaseRoot], new HashSet<string>(StringComparer.Ordinal) { "case.loaded", "inputs.valid" })]);
+    var command = new CoreTreeComparisonCommand(policy, () => DateTimeOffset.Parse("2026-08-11T00:00:00Z"));
+    var firstOutput = Path.Combine(scope.CaseRoot, "core-tree", "attempts", "attempt-001");
+    var first = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot, "operator", comparison.Customer, comparison.SourceOotb, comparison.TargetOotb,
+        firstOutput, comparison.ServerTextRules));
+
+    Assert.Equal(CoreTreeComparisonCommandStatus.Incomplete, first.CommandStatus);
+    Assert.True(File.Exists(Path.Combine(firstOutput, "incomplete-manifest.json")));
+    var secondOutput = Path.Combine(scope.CaseRoot, "core-tree", "attempts", "attempt-002");
+    var second = await command.ExecuteAsync(new CoreTreeComparisonCommandRequest(
+        scope.CaseRoot, "operator", comparison.Customer, comparison.SourceOotb, comparison.TargetOotb,
+        secondOutput, comparison.ServerTextRules,
+        new RetryEvidence(RetryBasis.VerifiedIdempotency, "retry-evidence.md")));
+
+    Assert.Equal(CoreTreeComparisonCommandStatus.Incomplete, second.CommandStatus);
+    Assert.NotEqual(first.AttemptId, second.AttemptId);
+    Assert.True(File.Exists(Path.Combine(secondOutput, "incomplete-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.SequenceEqual(
+        new[] { HistoryEventTypes.AttemptStarted, HistoryEventTypes.AttemptIncomplete, HistoryEventTypes.AttemptStarted, HistoryEventTypes.AttemptIncomplete },
+        history.Select(item => item.EventType));
 }
 
 static async Task CoreTreeCommandBlocksUnsafeAction()
@@ -1687,6 +1804,154 @@ static async Task CoreTreeCommandBlocksUnsafeAction()
     Assert.Equal(1, history.Count);
     Assert.Equal(HistoryEventTypes.ActionBlocked, history[0].EventType);
 }
+
+static async Task CoreTreeManualReviewApprovalIsControlled()
+{
+    await using var scope = TestScope.Create();
+    var route = UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow);
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38", route, DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var comparisonRoot = Path.Combine(scope.CaseRoot, "core-tree", "attempts", "attempt-001");
+    Directory.CreateDirectory(comparisonRoot);
+    var reviews = new[] { new CoreTreeManualReview("Server/bin/example.dll", "CustomerAdditionCollidesWithR38", null, ["Server/bin/example.dll"], "Manual review required.") };
+    await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "manual-reviews.json"), JsonSerializer.Serialize(reviews));
+    await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "incomplete-manifest.json"), JsonSerializer.Serialize(new { AttemptId = Guid.NewGuid(), Status = "Incomplete", ManualReviewCount = 1 }));
+    var register = Path.Combine(comparisonRoot, "manual-review-register.md");
+    await File.WriteAllTextAsync(register, "| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |\n|---|---|---|---|---|---|---|\n| MR-001 | Server/bin/example.dll | CustomerAdditionCollidesWithR38 | Use controlled deployment. | operator | 2026-08-11T10:30:00+08:00 | Resolved |\n");
+    var approvalRoot = Path.Combine(scope.CaseRoot, "core-tree", "review-approvals", "approval-001");
+    var policy = new SafetyPolicy([new SafetyWhitelistEntry(
+        CoreTreeManualReviewApprovalCommand.ActionId, CoreTreeManualReviewApprovalCommand.ActionVersion,
+        [Path.Combine(scope.CaseRoot, "core-tree", "review-approvals")], new HashSet<string>(StringComparer.Ordinal) { "case.loaded", "comparison.incomplete", "reviews.exactly.resolved" })]);
+    var result = await new CoreTreeManualReviewApprovalCommand(policy, () => DateTimeOffset.Parse("2026-08-11T00:00:00Z")).ExecuteAsync(new(
+        scope.CaseRoot, "operator", comparisonRoot, register, approvalRoot));
+
+    Assert.True(result.Status == CoreTreeManualReviewApprovalStatus.Approved, result.Message);
+    Assert.Equal(1, result.ResolvedReviewCount);
+    Assert.True(File.Exists(result.ApprovalManifestPath));
+    Assert.False(File.Exists(Path.Combine(comparisonRoot, "completion-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(HistoryEventTypes.CoreTreeManualReviewsApproved, history.Single().EventType);
+}
+
+static async Task CoreTreeFinalizationCreatesIndependentReceipt()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    var result = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+
+    Assert.Equal(CoreTreeComparisonFinalizationStatus.Completed, result.Status);
+    Assert.Equal(fixture.AttemptId, result.ComparisonAttemptId);
+    Assert.True(File.Exists(result.CompletionManifestPath));
+    Assert.True(File.Exists(Path.Combine(fixture.ComparisonRoot, "incomplete-manifest.json")));
+    Assert.False(File.Exists(Path.Combine(fixture.ComparisonRoot, "completion-manifest.json")));
+    var completion = JsonSerializer.Deserialize<CoreTreeComparisonCompletionManifest>(
+        await File.ReadAllTextAsync(result.CompletionManifestPath),
+        new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    Assert.Equal("ComparisonReviewFinalization", completion!.CompletionKind);
+    Assert.Equal(5, completion.ArtifactChecksums.Count);
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(HistoryEventTypes.CoreTreeComparisonCompleted, history.Last().EventType);
+}
+
+static async Task CoreTreeFinalizationBlocksTamperedReview()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    await File.AppendAllTextAsync(Path.Combine(fixture.ComparisonRoot, "manual-review-register.md"), "tampered");
+
+    var result = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+
+    Assert.Equal(CoreTreeComparisonFinalizationStatus.Blocked, result.Status);
+    Assert.True(result.Message.Contains("changed after approval", StringComparison.Ordinal));
+    Assert.False(Directory.Exists(fixture.Request.CompletionOutputRoot));
+}
+
+static async Task CoreTreeFinalizationRequiresNewOutput()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    Directory.CreateDirectory(fixture.Request.CompletionOutputRoot);
+
+    var result = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+
+    Assert.Equal(CoreTreeComparisonFinalizationStatus.Blocked, result.Status);
+    Assert.True(result.Message.Contains("must be a new path", StringComparison.Ordinal));
+}
+
+static async Task CoreTreeFinalizationIsPermanent()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    var command = CreateFinalizationCommand(scope);
+    var first = await command.ExecuteAsync(fixture.Request);
+    var secondOutput = Path.Combine(scope.CaseRoot, "core-tree", "completions", "completion-002");
+    var second = await command.ExecuteAsync(fixture.Request with { CompletionOutputRoot = secondOutput });
+
+    Assert.Equal(CoreTreeComparisonFinalizationStatus.Completed, first.Status);
+    Assert.Equal(CoreTreeComparisonFinalizationStatus.Blocked, second.Status);
+    Assert.True(second.Message.Contains("already has a completion receipt", StringComparison.Ordinal));
+    Assert.False(Directory.Exists(secondOutput));
+}
+
+static CoreTreeComparisonFinalizationCommand CreateFinalizationCommand(TestScope scope)
+{
+    var completionParent = Path.Combine(scope.CaseRoot, "core-tree", "completions");
+    var policy = new SafetyPolicy([new SafetyWhitelistEntry(
+        CoreTreeComparisonFinalizationCommand.ActionId,
+        CoreTreeComparisonFinalizationCommand.ActionVersion,
+        [completionParent],
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            "case.loaded", "comparison.incomplete", "comparison.errors.zero", "reviews.approved",
+            "reviews.checksums.valid", "history.consistent", "completion.output.new"
+        })]);
+    return new CoreTreeComparisonFinalizationCommand(policy, () => DateTimeOffset.Parse("2026-08-12T00:00:00Z"));
+}
+
+static async Task<FinalizationFixture> CreateFinalizationFixture(TestScope scope)
+{
+    var manifest = CaseManifest.Create(Guid.NewGuid(), "CUST-A", "12SP18", "R38",
+        UpgradeRoute.Create(1, [new UpgradeHop("12SP18", "R38", Path.Combine(scope.Root, "R38", "Support"))], DateTimeOffset.UtcNow),
+        DateTimeOffset.UtcNow);
+    await new CaseStore(scope.CaseRoot).CreateAsync(manifest);
+    var attemptId = Guid.NewGuid();
+    var comparisonRoot = Path.Combine(scope.CaseRoot, "core-tree", "attempts", "attempt-001");
+    Directory.CreateDirectory(comparisonRoot);
+    var reviewsPath = Path.Combine(comparisonRoot, "manual-reviews.json");
+    var registerPath = Path.Combine(comparisonRoot, "manual-review-register.md");
+    var reviews = new[] { new CoreTreeManualReview("Server/bin/example.dll", "CustomerAdditionCollidesWithR38", null, ["Server/bin/example.dll"], "Manual review required.") };
+    await File.WriteAllTextAsync(reviewsPath, JsonSerializer.Serialize(reviews));
+    await File.WriteAllTextAsync(registerPath, "| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |\n|---|---|---|---|---|---|---|\n| MR-001 | Server/bin/example.dll | CustomerAdditionCollidesWithR38 | Approved exclusion. | operator | 2026-08-12T08:00:00+08:00 | Resolved |\n");
+    await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "incomplete-manifest.json"), JsonSerializer.Serialize(new
+    {
+        AttemptId = attemptId, Status = "Incomplete", ManualReviewCount = 1, ErrorCount = 0
+    }));
+    await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "processing-summary.json"), JsonSerializer.Serialize(new
+    {
+        AttemptId = attemptId,
+        Counts = new { A = 1, B = 2, C = 3, ManualReview = 1, Errors = 0, Notices = 0 }
+    }));
+    var approvalRoot = Path.Combine(scope.CaseRoot, "core-tree", "review-approvals", "approval-001");
+    Directory.CreateDirectory(approvalRoot);
+    var approvalPath = Path.Combine(approvalRoot, "manual-review-approval.json");
+    var approval = new CoreTreeManualReviewApprovalManifest(
+        "Approved", manifest.CaseId, attemptId, comparisonRoot, reviewsPath, TestHashFile(reviewsPath),
+        registerPath, TestHashFile(registerPath), "operator", DateTimeOffset.Parse("2026-08-12T00:00:00Z"), 1);
+    await File.WriteAllTextAsync(approvalPath, JsonSerializer.Serialize(approval, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+
+    var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
+    await history.AppendAsync(manifest.CaseId, HistoryEventTypes.AttemptIncomplete, CoreTreeComparisonCommand.TaskId, "operator",
+        new AttemptResultPayload(attemptId, Path.Combine(comparisonRoot, "incomplete-manifest.json"), null), DateTimeOffset.UtcNow);
+    await history.AppendAsync(manifest.CaseId, HistoryEventTypes.CoreTreeManualReviewsApproved, CoreTreeManualReviewApprovalCommand.TaskId, "operator",
+        new CoreTreeManualReviewApprovalCommand.CoreTreeManualReviewApprovalHistoryPayload(attemptId, approvalPath, approval.ManualReviewsChecksum, approval.ReviewRegisterChecksum, 1), DateTimeOffset.UtcNow);
+
+    var request = new CoreTreeComparisonFinalizationRequest(
+        scope.CaseRoot, "operator", comparisonRoot, approvalPath,
+        Path.Combine(scope.CaseRoot, "core-tree", "completions", "completion-001"));
+    return new FinalizationFixture(attemptId, comparisonRoot, request);
+}
+
+static string TestHashFile(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 
 static async Task CoreTreePreflightReadsCaseWithoutMutation()
 {
@@ -1905,8 +2170,12 @@ static Task CoreTreeTestCliContract()
     var program = File.ReadAllText(Path.Combine(cliRoot, "Program.cs"));
     Assert.True(program.Contains("CoreTreeComparisonCommand", StringComparison.Ordinal));
     Assert.True(program.Contains("CoreTreeComparisonPreflightCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("CoreTreeManualReviewApprovalCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("CoreTreeComparisonFinalizationCommand", StringComparison.Ordinal));
     Assert.True(program.Contains("--request", StringComparison.Ordinal));
     Assert.True(program.Contains("--preflight", StringComparison.Ordinal));
+    Assert.True(program.Contains("--approve-reviews", StringComparison.Ordinal));
+    Assert.True(program.Contains("--finalize-comparison", StringComparison.Ordinal));
     Assert.True(program.Contains("JsonSerializer", StringComparison.Ordinal));
     return Task.CompletedTask;
 }
@@ -2121,6 +2390,7 @@ sealed class RecordingExternalExecutor(ExternalActionResult result) : IExternalA
     }
 }
 
+sealed record FinalizationFixture(Guid AttemptId, string ComparisonRoot, CoreTreeComparisonFinalizationRequest Request);
 sealed record CliProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
 sealed class TestScope : IAsyncDisposable

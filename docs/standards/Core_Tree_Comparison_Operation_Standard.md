@@ -3,8 +3,8 @@
 | 項目 | 內容 |
 |---|---|
 | 規範狀態 | 受控操作規範 |
-| 版本 | 1.0 |
-| 生效日 | 2026-08-06 |
+| 版本 | 1.1 |
+| 生效日 | 2026-08-11 |
 | 核准依據 | 專案負責人指示：「將操作指引納入受控規範」 |
 | 適用範圍 | 受控 Core Tree 比較的準備、前置檢查、request 執行、結果判讀及證據保存。 |
 
@@ -19,6 +19,12 @@
 7. 正式比較 request 必須有可識別的 `actor`、明確的 `safetyWhitelist`、前置證據與人工確認參考。
 8. 人工路徑對應、碰撞、無法讀取檔案及 A/B/C 分類決定都必須寫入 review register；任何未結案 review 均禁止 `Completed`。
 9. 本規範不授權 DB 存取、登入、Aras Export、Support/Solutions 變更、目標 Core Tree 修改或其他外部操作。
+
+## Attempt 產物遺失或完整性失敗
+
+1. 若 attempt output 中的 `manual-reviews.json`、`manual-review-register.md`、manifest、summary 或其他正式產物遺失、被修改或 checksum 不符，該 attempt 必須視為 `ArtifactIntegrityFailed`，並永久維持 `Incomplete`；不得補寫、覆寫、刪除後重建，或將其改為 `Completed`。
+2. 復原只能由正式 command 建立新的 attempt。執行前必須重新通過 preflight、重新驗證三份 input 的完整性，並提供 `VerifiedIdempotency` retry evidence，說明原 attempt、遺失原因、責任人與新 output root。正式 history 必須追加此復原／retry 的關聯證據，舊 attempt 與既有 history 不得變更。
+3. 正式 command 成功建立 attempt 產物後，`manual-reviews.json`、manifest、summary 與其他正式 JSON 產物必須受到受控保護，不得由人工新增、修改、刪除或以檔案總管補回。`manual-review-register.md` 是唯一例外，人工僅可填寫 `Decision`、`Approver`、`Approved at` 與 `Status`；核准 command 必須驗證其固定欄位仍與 `manual-reviews.json` 一致。無法套用所需保護時，必須在結果中記錄原因並維持 `Incomplete`。
 
 ## 受控操作文件
 

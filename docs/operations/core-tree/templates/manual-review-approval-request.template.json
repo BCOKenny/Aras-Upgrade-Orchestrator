@@ -1,0 +1,24 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\<case-id>",
+  "actor": "DOMAIN\\approved-operator",
+  "comparisonOutputRoot": "K:\\70.ArasUpgradeCases\\<case-id>\\core-tree\\attempts\\<incomplete-attempt>",
+  "reviewRegisterPath": "K:\\70.ArasUpgradeCases\\<case-id>\\core-tree\\attempts\\<incomplete-attempt>\\manual-review-register.md",
+  "approvalOutputRoot": "K:\\70.ArasUpgradeCases\\<case-id>\\core-tree\\review-approvals\\approval-<new-id>",
+  "prerequisites": {
+    "reviews.checked.by.responsible-owner": true
+  },
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.approve-manual-reviews",
+      "actionVersion": "1",
+      "allowedTargetRoots": [
+        "K:\\70.ArasUpgradeCases\\<case-id>\\core-tree\\review-approvals"
+      ],
+      "requiredPrerequisites": [
+        "case.loaded",
+        "comparison.incomplete",
+        "reviews.exactly.resolved"
+      ]
+    }
+  ]
+}

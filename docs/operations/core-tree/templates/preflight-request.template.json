@@ -13,6 +13,7 @@
   "serverRuleVersion": "RULE-VERSION",
   "serverRulePaths": ["Server/ExampleRule.cs"],
   "safetyWhitelist": [],
-  "prerequisites": {},
-  "retryEvidence": null
+  "prerequisites": [],
+  "retryEvidence": [],
+  "confirmation": "PRE-FLIGHT-CONFIRMATION-REFERENCE"
 }

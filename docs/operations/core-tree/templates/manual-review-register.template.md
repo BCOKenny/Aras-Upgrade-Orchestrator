@@ -1,9 +1,16 @@
-# 人工審核紀錄
+# Core Tree Manual Review Register
 
-| Review ID | 相對路徑 | 分類或對應問題 | 考慮選項 | 決定 | 核准人 | 日期 | 證據參考 | 狀態 |
-|---|---|---|---|---|---|---|---|---|
-| | | | | | | | | Open |
+This template documents the register generated automatically with an `Incomplete` comparison attempt. Do not manually create a register for a real attempt.
 
-- 每一個多候選路徑對應、目標碰撞、讀取失敗及人工 A/B/C 決定都必須記錄。
-- 有任何 `Open` 項目或未解決錯誤時，禁止 `Completed`。
-- 不得覆寫 command 結果、history、snapshot 或產生的 manifest 以結案 review。
+| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |
+|---|---|---|---|---|---|---|
+| MR-001 | Server/bin/example.dll | CustomerAdditionCollidesWithR38 |  |  |  | Open |
+
+Only these fields are human-editable:
+
+- `Decision`
+- `Approver`
+- `Approved at` — ISO 8601, for example `2026-08-11T10:30:00+08:00`
+- `Status` — `Open` or `Resolved`
+
+`Review ID`, `Relative path`, and `Issue code` are generated from `manual-reviews.json`. They must not be changed, reordered, added, or removed.

@@ -7,6 +7,7 @@ public static class HistoryEventTypes
 {
     public const string AttemptStarted = "attempt.started";
     public const string AttemptSucceeded = "attempt.succeeded";
+    public const string AttemptIncomplete = "attempt.incomplete";
     public const string AttemptFailed = "attempt.failed";
     public const string AttemptInterrupted = "attempt.interrupted";
     public const string ConfirmationRecorded = "confirmation.recorded";
@@ -15,6 +16,8 @@ public static class HistoryEventTypes
     public const string CustomerPackageFlowLocked = "customer-package.flow.locked";
     public const string CustomerPackageFlowRolledBack = "customer-package.flow.rolled-back";
     public const string CustomerPackageFlowCompleted = "customer-package.flow.completed";
+    public const string CoreTreeManualReviewsApproved = "core-tree.manual-reviews.approved";
+    public const string CoreTreeComparisonCompleted = "core-tree.comparison.completed";
 }
 
 public sealed record HistoryEntry(

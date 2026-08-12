@@ -55,6 +55,7 @@ public enum AttemptState
 {
     Running,
     Succeeded,
+    Incomplete,
     Failed,
     Interrupted
 }
@@ -88,6 +89,9 @@ public sealed class ExecutionAttemptService
                 throw new InvalidOperationException("任務已有進行中的執行嘗試。 ");
             if (latest.State == AttemptState.Succeeded)
                 throw new InvalidOperationException("已完成任務不得建立覆蓋性重跑。 ");
+            if (latest.State == AttemptState.Incomplete &&
+                retryEvidence?.Basis != RetryBasis.VerifiedIdempotency)
+                throw new InvalidOperationException("Incomplete 任務只允許具 VerifiedIdempotency 證據的新 attempt。 ");
             if (retryEvidence is null)
                 throw new InvalidOperationException("失敗或中斷後必須證明 Idempotency、Rollback 或已回到指定檢查點。 ");
             retryEvidence.Validate();
@@ -101,6 +105,9 @@ public sealed class ExecutionAttemptService
 
     public Task SucceedAsync(AttemptView attempt, string actor, string evidenceReference, CancellationToken cancellationToken = default) =>
         FinishAsync(attempt, actor, HistoryEventTypes.AttemptSucceeded, new AttemptResultPayload(attempt.AttemptId, evidenceReference, null), cancellationToken);
+
+    public Task IncompleteAsync(AttemptView attempt, string actor, string evidenceReference, CancellationToken cancellationToken = default) =>
+        FinishAsync(attempt, actor, HistoryEventTypes.AttemptIncomplete, new AttemptResultPayload(attempt.AttemptId, evidenceReference, null), cancellationToken);
 
     public Task FailAsync(AttemptView attempt, string actor, string message, string? evidenceReference = null, CancellationToken cancellationToken = default) =>
         FinishAsync(attempt, actor, HistoryEventTypes.AttemptFailed, new AttemptResultPayload(attempt.AttemptId, evidenceReference, message), cancellationToken);
@@ -137,11 +144,12 @@ public sealed class ExecutionAttemptService
                 started[payload.AttemptId] = (entry.SubjectId, payload);
                 states[payload.AttemptId] = AttemptState.Running;
             }
-            else if (TryGetTerminalState(entry.EventType, out var state))
+            else if (IsTerminalEvent(entry.EventType))
             {
                 var payload = entry.Payload.Deserialize<AttemptResultPayload>(AppendOnlyHistoryStore.JsonOptions)
                     ?? throw new InvalidDataException("執行嘗試結果事件缺少內容。 ");
-                if (started.ContainsKey(payload.AttemptId)) states[payload.AttemptId] = state;
+                if (started.ContainsKey(payload.AttemptId))
+                    states[payload.AttemptId] = ResolveTerminalState(entry.EventType, payload);
             }
         }
 
@@ -161,15 +169,24 @@ public sealed class ExecutionAttemptService
         await _history.AppendAsync(_caseId, eventType, attempt.TaskId, actor, result, _now(), cancellationToken: cancellationToken);
     }
 
-    private static bool TryGetTerminalState(string eventType, out AttemptState state)
+    private static AttemptState ResolveTerminalState(string eventType, AttemptResultPayload payload)
     {
-        state = eventType switch
+        // 相容舊版 Core Tree 歷程：舊 command 曾把 Incomplete 結果記成 attempt.succeeded。
+        // 保留原事件不變，僅依其正式 incomplete manifest 將讀取狀態還原為 Incomplete。
+        if (eventType == HistoryEventTypes.AttemptSucceeded &&
+            string.Equals(Path.GetFileName(payload.EvidenceReference), "incomplete-manifest.json", StringComparison.OrdinalIgnoreCase))
+            return AttemptState.Incomplete;
+
+        return eventType switch
         {
             HistoryEventTypes.AttemptSucceeded => AttemptState.Succeeded,
+            HistoryEventTypes.AttemptIncomplete => AttemptState.Incomplete,
             HistoryEventTypes.AttemptFailed => AttemptState.Failed,
             HistoryEventTypes.AttemptInterrupted => AttemptState.Interrupted,
-            _ => default
+            _ => throw new ArgumentOutOfRangeException(nameof(eventType), eventType, null)
         };
-        return eventType is HistoryEventTypes.AttemptSucceeded or HistoryEventTypes.AttemptFailed or HistoryEventTypes.AttemptInterrupted;
     }
+
+    private static bool IsTerminalEvent(string eventType) =>
+        eventType is HistoryEventTypes.AttemptSucceeded or HistoryEventTypes.AttemptIncomplete or HistoryEventTypes.AttemptFailed or HistoryEventTypes.AttemptInterrupted;
 }

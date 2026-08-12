@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using ArasUpgradeOrchestrator.Core.Safety;
 
 namespace ArasUpgradeOrchestrator.Core.CoreTrees;
@@ -125,7 +126,10 @@ public static class CoreTreeComparisonBuilder
             }, cancellationToken);
 
             if (classification.ManualReviews.Count > 0)
+            {
                 await WriteJsonAsync(Path.Combine(request.OutputRoot, "manual-reviews.json"), classification.ManualReviews, cancellationToken);
+                await WriteManualReviewRegisterAsync(Path.Combine(request.OutputRoot, "manual-review-register.md"), classification.ManualReviews, cancellationToken);
+            }
             if (classification.Errors.Count > 0)
                 await WriteJsonAsync(Path.Combine(request.OutputRoot, "errors.json"), classification.Errors, cancellationToken);
             if (classification.Notices.Count > 0)
@@ -206,5 +210,29 @@ public static class CoreTreeComparisonBuilder
         await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, FileOptions.WriteThrough);
         await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken);
         await stream.FlushAsync(cancellationToken);
+    }
+
+    private static async Task WriteManualReviewRegisterAsync(string path, IReadOnlyList<CoreTreeManualReview> reviews, CancellationToken cancellationToken)
+    {
+        var text = new StringBuilder()
+            .AppendLine("# Core Tree Manual Review Register")
+            .AppendLine()
+            .AppendLine("Generated from manual-reviews.json. Do not change Review ID, relative path, or issue code.")
+            .AppendLine("Only Decision, Approver, Approved at, and Status are human-editable.")
+            .AppendLine()
+            .AppendLine("| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |")
+            .AppendLine("|---|---|---|---|---|---|---|");
+        for (var index = 0; index < reviews.Count; index++)
+        {
+            var review = reviews[index];
+            text.Append("| MR-").Append((index + 1).ToString("000")).Append(" | ")
+                .Append(review.SourceRelativePath).Append(" | ")
+                .Append(review.Code).AppendLine(" |  |  |  | Open |");
+        }
+
+        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, FileOptions.WriteThrough);
+        await using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+        await writer.WriteAsync(text.ToString().AsMemory(), cancellationToken);
+        await writer.FlushAsync(cancellationToken);
     }
 }

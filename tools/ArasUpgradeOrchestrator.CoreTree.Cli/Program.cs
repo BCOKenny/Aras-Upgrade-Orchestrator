@@ -15,12 +15,62 @@ if (args is ["--help"] or ["-h"] or [])
     Console.WriteLine("Build once: dotnet build ArasUpgradeOrchestrator.sln --configuration Release --no-restore");
     Console.WriteLine("Run the compiled CLI: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --preflight <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --request <request.json>");
+    Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --approve-reviews <request.json>");
+    Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --finalize-comparison <request.json>");
     Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist for --request.");
     return 0;
 }
 
+if (args is ["--approve-reviews", var approvalRequestPath] && !string.IsNullOrWhiteSpace(approvalRequestPath))
+{
+    try
+    {
+        var approvalInput = JsonSerializer.Deserialize<CliApprovalRequest>(await File.ReadAllTextAsync(approvalRequestPath), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        ValidateApprovalInput(approvalInput);
+        var whitelist = approvalInput.SafetyWhitelist.Select(entry => new SafetyWhitelistEntry(
+            entry.ActionId, entry.ActionVersion, entry.AllowedTargetRoots,
+            new HashSet<string>(entry.RequiredPrerequisites, StringComparer.Ordinal), entry.RequiredInputDigest)).ToArray();
+        var result = await new CoreTreeManualReviewApprovalCommand(new SafetyPolicy(whitelist)).ExecuteAsync(new(
+            approvalInput.CaseRoot, approvalInput.Actor, approvalInput.ComparisonOutputRoot,
+            approvalInput.ReviewRegisterPath, approvalInput.ApprovalOutputRoot,
+            approvalInput.Confirmation is null ? null : new ActionConfirmation(approvalInput.Confirmation.DecisionDigest, approvalInput.Confirmation.Actor, approvalInput.Confirmation.ConfirmedAt),
+            approvalInput.Prerequisites));
+        Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
+        return result.Status == CoreTreeManualReviewApprovalStatus.Approved ? 0 : 2;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, jsonOptions);
+    }
+}
+
+if (args is ["--finalize-comparison", var finalizationRequestPath] && !string.IsNullOrWhiteSpace(finalizationRequestPath))
+{
+    try
+    {
+        var finalizationInput = JsonSerializer.Deserialize<CliFinalizationRequest>(await File.ReadAllTextAsync(finalizationRequestPath), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        ValidateFinalizationInput(finalizationInput);
+        var whitelist = finalizationInput.SafetyWhitelist.Select(entry => new SafetyWhitelistEntry(
+            entry.ActionId, entry.ActionVersion, entry.AllowedTargetRoots,
+            new HashSet<string>(entry.RequiredPrerequisites, StringComparer.Ordinal), entry.RequiredInputDigest)).ToArray();
+        var result = await new CoreTreeComparisonFinalizationCommand(new SafetyPolicy(whitelist)).ExecuteAsync(new(
+            finalizationInput.CaseRoot, finalizationInput.Actor, finalizationInput.ComparisonOutputRoot,
+            finalizationInput.ApprovalManifestPath, finalizationInput.CompletionOutputRoot,
+            finalizationInput.Confirmation is null ? null : new ActionConfirmation(finalizationInput.Confirmation.DecisionDigest, finalizationInput.Confirmation.Actor, finalizationInput.Confirmation.ConfirmedAt),
+            finalizationInput.Prerequisites));
+        Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
+        return result.Status == CoreTreeComparisonFinalizationStatus.Completed ? 0 : 2;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, jsonOptions);
+    }
+}
+
 if (args is not ["--preflight" or "--request", var requestPath] || string.IsNullOrWhiteSpace(requestPath))
-    return await WriteFailureAsync("CliArgumentError", "Expected --preflight <request.json> or --request <request.json>. Use --help for usage.", 2, jsonOptions);
+    return await WriteFailureAsync("CliArgumentError", "Expected --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, or --finalize-comparison <request.json>. Use --help for usage.", 2, jsonOptions);
 
 try
 {
@@ -118,6 +168,28 @@ static void Require(string? value, string fieldName)
         throw new InvalidDataException($"{fieldName} is required.");
 }
 
+static void ValidateApprovalInput(CliApprovalRequest input)
+{
+    Require(input.CaseRoot, nameof(input.CaseRoot));
+    Require(input.Actor, nameof(input.Actor));
+    Require(input.ComparisonOutputRoot, nameof(input.ComparisonOutputRoot));
+    Require(input.ReviewRegisterPath, nameof(input.ReviewRegisterPath));
+    Require(input.ApprovalOutputRoot, nameof(input.ApprovalOutputRoot));
+    if (input.SafetyWhitelist is null || input.SafetyWhitelist.Count == 0)
+        throw new InvalidDataException("SafetyWhitelist is required.");
+}
+
+static void ValidateFinalizationInput(CliFinalizationRequest input)
+{
+    Require(input.CaseRoot, nameof(input.CaseRoot));
+    Require(input.Actor, nameof(input.Actor));
+    Require(input.ComparisonOutputRoot, nameof(input.ComparisonOutputRoot));
+    Require(input.ApprovalManifestPath, nameof(input.ApprovalManifestPath));
+    Require(input.CompletionOutputRoot, nameof(input.CompletionOutputRoot));
+    if (input.SafetyWhitelist is null || input.SafetyWhitelist.Count == 0)
+        throw new InvalidDataException("SafetyWhitelist is required.");
+}
+
 static async Task<int> WriteFailureAsync(string code, string message, int exitCode, JsonSerializerOptions options)
 {
     Console.WriteLine(JsonSerializer.Serialize(new CliFailure("Error", code, message), options));
@@ -155,3 +227,22 @@ public sealed record CliSafetyWhitelistEntry(
 
 public sealed record CliRetryEvidence(RetryBasis Basis, string EvidenceReference);
 public sealed record CliConfirmation(string DecisionDigest, string Actor, DateTimeOffset ConfirmedAt);
+public sealed record CliApprovalRequest(
+    string CaseRoot,
+    string Actor,
+    string ComparisonOutputRoot,
+    string ReviewRegisterPath,
+    string ApprovalOutputRoot,
+    IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
+    IReadOnlyDictionary<string, bool>? Prerequisites = null,
+    CliConfirmation? Confirmation = null);
+
+public sealed record CliFinalizationRequest(
+    string CaseRoot,
+    string Actor,
+    string ComparisonOutputRoot,
+    string ApprovalManifestPath,
+    string CompletionOutputRoot,
+    IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
+    IReadOnlyDictionary<string, bool>? Prerequisites = null,
+    CliConfirmation? Confirmation = null);
