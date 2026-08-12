@@ -18,6 +18,7 @@ public static class HistoryEventTypes
     public const string CustomerPackageFlowCompleted = "customer-package.flow.completed";
     public const string CoreTreeManualReviewsApproved = "core-tree.manual-reviews.approved";
     public const string CoreTreeComparisonCompleted = "core-tree.comparison.completed";
+    public const string CoreTreeDeliveryCompleted = "core-tree.delivery.completed";
 }
 
 public sealed record HistoryEntry(

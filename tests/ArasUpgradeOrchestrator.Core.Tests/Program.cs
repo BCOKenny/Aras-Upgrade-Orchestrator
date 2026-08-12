@@ -92,6 +92,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 完成判定阻擋核准後遭修改的 review", CoreTreeFinalizationBlocksTamperedReview)
     ,("Core Tree 完成判定拒絕既有輸出目錄", CoreTreeFinalizationRequiresNewOutput)
     ,("Core Tree 完成判定拒絕同一 attempt 重複完成", CoreTreeFinalizationIsPermanent)
+    ,("Core Tree 獨立交付從完成收據建立 A B C 目錄", CoreTreeDeliveryBuildsIndependentOutput)
+    ,("Core Tree 獨立交付阻擋輸入 tree 異動", CoreTreeDeliveryBlocksChangedInput)
+    ,("Core Tree 獨立交付拒絕重複 delivery", CoreTreeDeliveryIsPermanent)
     ,("Core Tree preflight 僅讀取案件並回報可執行條件", CoreTreePreflightReadsCaseWithoutMutation)
     ,("Core Tree preflight 阻擋 checksum 有效但不安全的 Server 規則", CoreTreePreflightBlocksUnsafeServerRules)
     ,("Core Tree preflight 將損毀案件 manifest 轉為阻擋結果", CoreTreePreflightBlocksMalformedManifest)
@@ -1848,7 +1851,7 @@ static async Task CoreTreeFinalizationCreatesIndependentReceipt()
         await File.ReadAllTextAsync(result.CompletionManifestPath),
         new JsonSerializerOptions(JsonSerializerDefaults.Web));
     Assert.Equal("ComparisonReviewFinalization", completion!.CompletionKind);
-    Assert.Equal(5, completion.ArtifactChecksums.Count);
+    Assert.Equal(6, completion.ArtifactChecksums.Count);
     var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
     Assert.Equal(HistoryEventTypes.CoreTreeComparisonCompleted, history.Last().EventType);
 }
@@ -1893,6 +1896,67 @@ static async Task CoreTreeFinalizationIsPermanent()
     Assert.False(Directory.Exists(secondOutput));
 }
 
+static async Task CoreTreeDeliveryBuildsIndependentOutput()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    var finalization = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+    var delivery = await CreateDeliveryCommand(scope).ExecuteAsync(new CoreTreeDeliveryRequest(
+        scope.CaseRoot, "operator", fixture.ComparisonRoot, finalization.CompletionManifestPath,
+        Path.Combine(scope.CaseRoot, "core-tree", "deliveries", "delivery-001")));
+
+    Assert.True(delivery.Status == CoreTreeDeliveryStatus.Completed, delivery.Message);
+    Assert.Equal(14, delivery.OutputFileCount);
+    Assert.True(File.Exists(delivery.DeliveryManifestPath));
+    Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(delivery.DeliveryManifestPath)!, "A", "CustomerSource", "Client", "a.js")));
+    Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(delivery.DeliveryManifestPath)!, "C", "CustomerSource", "Client", "c.ts")));
+    Assert.False(File.Exists(Path.Combine(fixture.ComparisonRoot, "delivery-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
+    Assert.Equal(HistoryEventTypes.CoreTreeDeliveryCompleted, history.Last().EventType);
+}
+
+static async Task CoreTreeDeliveryBlocksChangedInput()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    var finalization = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+    await File.AppendAllTextAsync(Path.Combine(scope.Root, "inputs", "customer", "Innovator", "Client", "a.js"), "changed");
+
+    var delivery = await CreateDeliveryCommand(scope).ExecuteAsync(new CoreTreeDeliveryRequest(
+        scope.CaseRoot, "operator", fixture.ComparisonRoot, finalization.CompletionManifestPath,
+        Path.Combine(scope.CaseRoot, "core-tree", "deliveries", "delivery-001")));
+
+    Assert.Equal(CoreTreeDeliveryStatus.Blocked, delivery.Status);
+    Assert.True(delivery.Message.Contains("inputs changed", StringComparison.OrdinalIgnoreCase));
+}
+
+static async Task CoreTreeDeliveryIsPermanent()
+{
+    await using var scope = TestScope.Create();
+    var fixture = await CreateFinalizationFixture(scope);
+    var finalization = await CreateFinalizationCommand(scope).ExecuteAsync(fixture.Request);
+    var command = CreateDeliveryCommand(scope);
+    var first = await command.ExecuteAsync(new CoreTreeDeliveryRequest(scope.CaseRoot, "operator", fixture.ComparisonRoot, finalization.CompletionManifestPath,
+        Path.Combine(scope.CaseRoot, "core-tree", "deliveries", "delivery-001")));
+    var second = await command.ExecuteAsync(new CoreTreeDeliveryRequest(scope.CaseRoot, "operator", fixture.ComparisonRoot, finalization.CompletionManifestPath,
+        Path.Combine(scope.CaseRoot, "core-tree", "deliveries", "delivery-002")));
+
+    Assert.True(first.Status == CoreTreeDeliveryStatus.Completed, first.Message);
+    Assert.Equal(CoreTreeDeliveryStatus.Blocked, second.Status);
+    Assert.True(second.Message.Contains("already has a delivery", StringComparison.Ordinal));
+}
+
+static CoreTreeDeliveryCommand CreateDeliveryCommand(TestScope scope)
+{
+    var deliveriesRoot = Path.Combine(scope.CaseRoot, "core-tree", "deliveries");
+    return new CoreTreeDeliveryCommand(new SafetyPolicy([new SafetyWhitelistEntry(
+        CoreTreeDeliveryCommand.ActionId, CoreTreeDeliveryCommand.ActionVersion, [deliveriesRoot],
+        new HashSet<string>(StringComparer.Ordinal)
+        {
+            "case.loaded", "comparison.completed", "comparison.evidence.valid", "inputs.immutable", "manual.reviews.applied", "delivery.output.new"
+        })]), () => DateTimeOffset.Parse("2026-08-12T00:00:00Z"));
+}
+
 static CoreTreeComparisonFinalizationCommand CreateFinalizationCommand(TestScope scope)
 {
     var completionParent = Path.Combine(scope.CaseRoot, "core-tree", "completions");
@@ -1921,7 +1985,28 @@ static async Task<FinalizationFixture> CreateFinalizationFixture(TestScope scope
     var registerPath = Path.Combine(comparisonRoot, "manual-review-register.md");
     var reviews = new[] { new CoreTreeManualReview("Server/bin/example.dll", "CustomerAdditionCollidesWithR38", null, ["Server/bin/example.dll"], "Manual review required.") };
     await File.WriteAllTextAsync(reviewsPath, JsonSerializer.Serialize(reviews));
-    await File.WriteAllTextAsync(registerPath, "| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |\n|---|---|---|---|---|---|---|\n| MR-001 | Server/bin/example.dll | CustomerAdditionCollidesWithR38 | Approved exclusion. | operator | 2026-08-12T08:00:00+08:00 | Resolved |\n");
+    await File.WriteAllTextAsync(registerPath, "| Review ID | Relative path | Issue code | Decision | Approver | Approved at | Status |\n|---|---|---|---|---|---|---|\n| MR-001 | Server/bin/example.dll | CustomerAdditionCollidesWithR38 | Exclude | operator | 2026-08-12T08:00:00+08:00 | Resolved |\n");
+    var customerRoot = Path.Combine(scope.Root, "inputs", "customer");
+    var sourceOotbRoot = Path.Combine(scope.Root, "inputs", "source-ootb");
+    var targetOotbRoot = Path.Combine(scope.Root, "inputs", "target-ootb");
+    var customer = new CoreTreeInputEvidence(customerRoot, "12SP18", "customer-evidence");
+    var sourceOotb = new CoreTreeInputEvidence(sourceOotbRoot, "12SP18", "source-evidence");
+    var targetOotb = new CoreTreeInputEvidence(targetOotbRoot, "R38", "target-evidence");
+    foreach (var relative in new[] { "Client/a.js", "Client/b.js", "Client/c.js", "Client/d.js", "Client/e.js", "Server/bin/example.dll" })
+        await WriteCoreTreeFile(Path.Combine(customerRoot, "Innovator"), relative, "customer-" + relative);
+    foreach (var relative in new[] { "Client/b.js", "Client/c.js", "Client/d.js", "Client/e.js" })
+        await WriteCoreTreeFile(Path.Combine(sourceOotbRoot, "Innovator"), relative, "source-" + relative);
+    foreach (var relative in new[] { "Client/c.ts", "Client/d.js", "Client/e.js", "Server/bin/example.dll" })
+        await WriteCoreTreeFile(Path.Combine(targetOotbRoot, "Innovator"), relative, "target-" + relative);
+    var items = new[]
+    {
+        new CoreTreeClassifiedItem(CoreTreeClassification.A, "Client/a.js", null),
+        new CoreTreeClassifiedItem(CoreTreeClassification.B, "Client/b.js", null),
+        new CoreTreeClassifiedItem(CoreTreeClassification.B, "Client/c.js", null),
+        new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/c.js", "Client/c.ts"),
+        new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/d.js", "Client/d.js"),
+        new CoreTreeClassifiedItem(CoreTreeClassification.C, "Client/e.js", "Client/e.js")
+    };
     await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "incomplete-manifest.json"), JsonSerializer.Serialize(new
     {
         AttemptId = attemptId, Status = "Incomplete", ManualReviewCount = 1, ErrorCount = 0
@@ -1929,8 +2014,18 @@ static async Task<FinalizationFixture> CreateFinalizationFixture(TestScope scope
     await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "processing-summary.json"), JsonSerializer.Serialize(new
     {
         AttemptId = attemptId,
+        Customer = customer, SourceOotb = sourceOotb, TargetOotb = targetOotb,
         Counts = new { A = 1, B = 2, C = 3, ManualReview = 1, Errors = 0, Notices = 0 }
     }));
+    var classification = new CoreTreeComparisonResult(attemptId, CoreTreeComparisonStatus.Blocked, items, reviews, [], [], comparisonRoot,
+        "server-text/1", "rules", DateTimeOffset.Parse("2026-08-12T07:00:00Z"), DateTimeOffset.Parse("2026-08-12T07:01:00Z"));
+    var snapshot = new CoreTreeComparisonSnapshot(attemptId, classification, new Dictionary<string, string>
+    {
+        ["customer"] = CoreTreeComparisonBuilder.ComputeTreeDigest(customerRoot),
+        ["source-ootb"] = CoreTreeComparisonBuilder.ComputeTreeDigest(sourceOotbRoot),
+        ["target-ootb"] = CoreTreeComparisonBuilder.ComputeTreeDigest(targetOotbRoot)
+    });
+    await File.WriteAllTextAsync(Path.Combine(comparisonRoot, "classification-result.json"), JsonSerializer.Serialize(snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     var approvalRoot = Path.Combine(scope.CaseRoot, "core-tree", "review-approvals", "approval-001");
     Directory.CreateDirectory(approvalRoot);
     var approvalPath = Path.Combine(approvalRoot, "manual-review-approval.json");
@@ -2172,10 +2267,12 @@ static Task CoreTreeTestCliContract()
     Assert.True(program.Contains("CoreTreeComparisonPreflightCommand", StringComparison.Ordinal));
     Assert.True(program.Contains("CoreTreeManualReviewApprovalCommand", StringComparison.Ordinal));
     Assert.True(program.Contains("CoreTreeComparisonFinalizationCommand", StringComparison.Ordinal));
+    Assert.True(program.Contains("CoreTreeDeliveryCommand", StringComparison.Ordinal));
     Assert.True(program.Contains("--request", StringComparison.Ordinal));
     Assert.True(program.Contains("--preflight", StringComparison.Ordinal));
     Assert.True(program.Contains("--approve-reviews", StringComparison.Ordinal));
     Assert.True(program.Contains("--finalize-comparison", StringComparison.Ordinal));
+    Assert.True(program.Contains("--build-delivery", StringComparison.Ordinal));
     Assert.True(program.Contains("JsonSerializer", StringComparison.Ordinal));
     return Task.CompletedTask;
 }

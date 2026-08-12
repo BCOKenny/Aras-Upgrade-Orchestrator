@@ -17,6 +17,7 @@ if (args is ["--help"] or ["-h"] or [])
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --request <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --approve-reviews <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --finalize-comparison <request.json>");
+    Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --build-delivery <request.json>");
     Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist for --request.");
     return 0;
 }
@@ -69,8 +70,32 @@ if (args is ["--finalize-comparison", var finalizationRequestPath] && !string.Is
     }
 }
 
+if (args is ["--build-delivery", var deliveryRequestPath] && !string.IsNullOrWhiteSpace(deliveryRequestPath))
+{
+    try
+    {
+        var deliveryInput = JsonSerializer.Deserialize<CliDeliveryRequest>(await File.ReadAllTextAsync(deliveryRequestPath), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        ValidateDeliveryInput(deliveryInput);
+        var whitelist = deliveryInput.SafetyWhitelist.Select(entry => new SafetyWhitelistEntry(
+            entry.ActionId, entry.ActionVersion, entry.AllowedTargetRoots,
+            new HashSet<string>(entry.RequiredPrerequisites, StringComparer.Ordinal), entry.RequiredInputDigest)).ToArray();
+        var result = await new CoreTreeDeliveryCommand(new SafetyPolicy(whitelist)).ExecuteAsync(new(
+            deliveryInput.CaseRoot, deliveryInput.Actor, deliveryInput.ComparisonOutputRoot,
+            deliveryInput.CompletionManifestPath, deliveryInput.DeliveryOutputRoot,
+            deliveryInput.Confirmation is null ? null : new ActionConfirmation(deliveryInput.Confirmation.DecisionDigest, deliveryInput.Confirmation.Actor, deliveryInput.Confirmation.ConfirmedAt),
+            deliveryInput.Prerequisites));
+        Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
+        return result.Status == CoreTreeDeliveryStatus.Completed ? 0 : 2;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, jsonOptions);
+    }
+}
+
 if (args is not ["--preflight" or "--request", var requestPath] || string.IsNullOrWhiteSpace(requestPath))
-    return await WriteFailureAsync("CliArgumentError", "Expected --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, or --finalize-comparison <request.json>. Use --help for usage.", 2, jsonOptions);
+    return await WriteFailureAsync("CliArgumentError", "Expected --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, --finalize-comparison <request.json>, or --build-delivery <request.json>. Use --help for usage.", 2, jsonOptions);
 
 try
 {
@@ -190,6 +215,17 @@ static void ValidateFinalizationInput(CliFinalizationRequest input)
         throw new InvalidDataException("SafetyWhitelist is required.");
 }
 
+static void ValidateDeliveryInput(CliDeliveryRequest input)
+{
+    Require(input.CaseRoot, nameof(input.CaseRoot));
+    Require(input.Actor, nameof(input.Actor));
+    Require(input.ComparisonOutputRoot, nameof(input.ComparisonOutputRoot));
+    Require(input.CompletionManifestPath, nameof(input.CompletionManifestPath));
+    Require(input.DeliveryOutputRoot, nameof(input.DeliveryOutputRoot));
+    if (input.SafetyWhitelist is null || input.SafetyWhitelist.Count == 0)
+        throw new InvalidDataException("SafetyWhitelist is required.");
+}
+
 static async Task<int> WriteFailureAsync(string code, string message, int exitCode, JsonSerializerOptions options)
 {
     Console.WriteLine(JsonSerializer.Serialize(new CliFailure("Error", code, message), options));
@@ -243,6 +279,16 @@ public sealed record CliFinalizationRequest(
     string ComparisonOutputRoot,
     string ApprovalManifestPath,
     string CompletionOutputRoot,
+    IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
+    IReadOnlyDictionary<string, bool>? Prerequisites = null,
+    CliConfirmation? Confirmation = null);
+
+public sealed record CliDeliveryRequest(
+    string CaseRoot,
+    string Actor,
+    string ComparisonOutputRoot,
+    string CompletionManifestPath,
+    string DeliveryOutputRoot,
     IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
     IReadOnlyDictionary<string, bool>? Prerequisites = null,
     CliConfirmation? Confirmation = null);

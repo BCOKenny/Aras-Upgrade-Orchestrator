@@ -86,11 +86,13 @@ public sealed class CoreTreeComparisonFinalizationCommand
 
             var incompletePath = RequireFile(comparisonRoot, "incomplete-manifest.json");
             var summaryPath = RequireFile(comparisonRoot, "processing-summary.json");
+            var classificationPath = RequireFile(comparisonRoot, "classification-result.json");
             var reviewsPath = RequireFile(comparisonRoot, "manual-reviews.json");
             var registerPath = RequireFile(comparisonRoot, "manual-review-register.md");
 
             var incomplete = await ReadJsonAsync<IncompleteManifest>(incompletePath, cancellationToken);
             var summary = await ReadJsonAsync<ProcessingSummary>(summaryPath, cancellationToken);
+            var snapshot = await ReadJsonAsync<CoreTreeComparisonSnapshot>(classificationPath, cancellationToken);
             var reviews = await ReadJsonAsync<CoreTreeManualReview[]>(reviewsPath, cancellationToken);
             var approval = await ReadJsonAsync<CoreTreeManualReviewApprovalManifest>(approvalPath, cancellationToken);
 
@@ -100,6 +102,12 @@ public sealed class CoreTreeComparisonFinalizationCommand
                 throw new InvalidDataException("A comparison with errors cannot be finalized.");
             if (summary.AttemptId != incomplete.AttemptId || summary.Counts.ManualReview != incomplete.ManualReviewCount || reviews.Length != incomplete.ManualReviewCount)
                 throw new InvalidDataException("Comparison summary, manifest, and manual review counts do not match.");
+            if (snapshot.AttemptId != incomplete.AttemptId || snapshot.Classification.AttemptId != incomplete.AttemptId ||
+                snapshot.Classification.Items.Count(item => item.Classification == CoreTreeClassification.A) != summary.Counts.A ||
+                snapshot.Classification.Items.Count(item => item.Classification == CoreTreeClassification.B) != summary.Counts.B ||
+                snapshot.Classification.Items.Count(item => item.Classification == CoreTreeClassification.C) != summary.Counts.C ||
+                snapshot.Classification.ManualReviews.Count != reviews.Length || snapshot.InputTreeDigests.Count != 3)
+                throw new InvalidDataException("Classification snapshot does not match the comparison summary.");
             if (!string.Equals(approval.State, "Approved", StringComparison.Ordinal) || approval.CaseId != caseManifest.CaseId ||
                 approval.ComparisonAttemptId != incomplete.AttemptId || approval.ResolvedReviewCount != reviews.Length ||
                 !SamePath(approval.ComparisonOutputRoot, comparisonRoot) || !SamePath(approval.ManualReviewsPath, reviewsPath) ||
@@ -112,6 +120,7 @@ public sealed class CoreTreeComparisonFinalizationCommand
             var historyState = await ValidateHistoryAsync(history, caseManifest.CaseId, incomplete.AttemptId, approvalPath, cancellationToken);
             var checksums = new SortedDictionary<string, string>(StringComparer.Ordinal)
             {
+                ["classification-result.json"] = HashFile(classificationPath),
                 ["incomplete-manifest.json"] = HashFile(incompletePath),
                 ["manual-review-approval.json"] = HashFile(approvalPath),
                 ["manual-review-register.md"] = HashFile(registerPath),

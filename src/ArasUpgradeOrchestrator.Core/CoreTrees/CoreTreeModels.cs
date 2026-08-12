@@ -109,3 +109,13 @@ public sealed record CoreTreeComparisonResult(
     string ServerRuleChecksum,
     DateTimeOffset StartedAt,
     DateTimeOffset FinishedAt);
+
+/// <summary>
+/// Immutable classification evidence written with every formal comparison attempt.
+/// It allows a later, separate delivery command to prove it is copying the same
+/// classified inputs rather than re-running or guessing the comparison.
+/// </summary>
+public sealed record CoreTreeComparisonSnapshot(
+    Guid AttemptId,
+    CoreTreeComparisonResult Classification,
+    IReadOnlyDictionary<string, string> InputTreeDigests);

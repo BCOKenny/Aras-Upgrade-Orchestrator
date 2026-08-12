@@ -125,6 +125,17 @@ public static class CoreTreeComparisonBuilder
                 }
             }, cancellationToken);
 
+            var snapshot = new CoreTreeComparisonSnapshot(
+                classification.AttemptId,
+                classification,
+                new SortedDictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["customer"] = ComputeTreeDigest(request.Customer.RootPath),
+                    ["source-ootb"] = ComputeTreeDigest(request.SourceOotb.RootPath),
+                    ["target-ootb"] = ComputeTreeDigest(request.TargetOotb.RootPath)
+                });
+            await WriteJsonAsync(Path.Combine(request.OutputRoot, "classification-result.json"), snapshot, cancellationToken);
+
             if (classification.ManualReviews.Count > 0)
             {
                 await WriteJsonAsync(Path.Combine(request.OutputRoot, "manual-reviews.json"), classification.ManualReviews, cancellationToken);
@@ -210,6 +221,21 @@ public static class CoreTreeComparisonBuilder
         await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, FileOptions.WriteThrough);
         await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken);
         await stream.FlushAsync(cancellationToken);
+    }
+
+    public static string ComputeTreeDigest(string rootPath)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath));
+        if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Core Tree input does not exist: {root}.");
+        var lines = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Select(path =>
+            {
+                var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
+                var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path)));
+                return $"{relative}:{hash}";
+            });
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", lines))));
     }
 
     private static async Task WriteManualReviewRegisterAsync(string path, IReadOnlyList<CoreTreeManualReview> reviews, CancellationToken cancellationToken)
