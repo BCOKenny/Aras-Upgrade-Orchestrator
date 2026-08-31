@@ -270,6 +270,7 @@ public sealed class CoreTreeDeliveryCommand
     {
         var source = CoreTreeLogicalPathResolver.ToFullPath(inputRoot, inputRelative);
         var destination = CoreTreeLogicalPathResolver.ToFullPath(outputRoot, outputRelative);
+        var sourceLastWriteTimeUtc = File.GetLastWriteTimeUtc(source);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous))
         await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous | FileOptions.WriteThrough))
@@ -277,6 +278,7 @@ public sealed class CoreTreeDeliveryCommand
             await input.CopyToAsync(output, cancellationToken);
             await output.FlushAsync(cancellationToken);
         }
+        File.SetLastWriteTimeUtc(destination, sourceLastWriteTimeUtc);
         files.Add(new(Path.GetRelativePath(deliveryRoot, destination).Replace('\\', '/'), HashFile(destination)));
     }
 

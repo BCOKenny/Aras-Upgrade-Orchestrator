@@ -9,6 +9,7 @@
 1. 在寫入前取得 output attempt 的 directory lease，並確認路徑不存在。
 2. 不得寫入 customer、source OOTB、target OOTB、Server 規則或 fixture；比較前後 checksum 必須一致。
 3. `C` 只能使用唯一 target mapping。`js` 對 `ts`／`tsx` 是交付命名演進，不是轉譯或內容轉換。
-4. 交付檔與 messages 依共用契約排序；每一複本以 SHA-256 記錄。
-5. 只有分類結果零 ManualReview、零 Error，且所有複製與 manifest 寫入成功，才建立 `completion-manifest.json`。
-6. 每次重試使用新 unique attempt；不得覆寫舊輸出，即使目錄只含部分 A／B／C 或不完整 manifest。
+4. 每個 A／B／C 交付複本都必須保留實際來源檔案的 `LastWriteTimeUtc`。C 的 customer／source 即使改用 target path 或副檔名，也各自保留原 customer／source 的修改時間；`C/OOTBR38` 保留 target OOTB 的修改時間。目的檔的 `CreationTimeUtc` 仍代表新 delivery 的建立時間。
+5. 交付檔與 messages 依共用契約排序；每一複本以 SHA-256 記錄。
+6. 只有分類結果零 ManualReview、零 Error，且所有複製、修改時間保存與 manifest 寫入成功，才建立 `completion-manifest.json`。
+7. 每次重試使用新 unique attempt；不得覆寫舊輸出，即使目錄只含部分 A／B／C 或不完整 manifest。

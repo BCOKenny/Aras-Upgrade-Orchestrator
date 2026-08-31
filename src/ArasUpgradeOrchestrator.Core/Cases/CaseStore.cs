@@ -26,9 +26,12 @@ public sealed class CaseStore
 
     public async Task CreateAsync(CaseManifest manifest, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(manifest);
+        if (File.Exists(ManifestPath)) throw new InvalidOperationException("案件根目錄已存在案件清單。 ");
+        if (File.Exists(Path.Combine(ToolDataPath, "history.jsonl")))
+            throw new InvalidOperationException("案件根目錄已存在正式執行歷程，拒絕建立新案件清單。 ");
         Directory.CreateDirectory(_caseRoot);
         Directory.CreateDirectory(ToolDataPath);
-        if (File.Exists(ManifestPath)) throw new InvalidOperationException("案件根目錄已存在案件清單。 ");
         await WriteAtomicallyAsync(manifest, cancellationToken);
     }
 
@@ -80,14 +83,27 @@ public sealed class CaseStore
     {
         if (manifest.SchemaVersion != CaseManifest.CurrentSchemaVersion)
             throw new InvalidDataException($"不支援案件清單版本 {manifest.SchemaVersion}。 ");
-        if (manifest.Routes.Count == 0 || manifest.Routes.All(route => route.Version != manifest.CurrentRouteVersion))
+        if (manifest.CaseId == Guid.Empty || string.IsNullOrWhiteSpace(manifest.CustomerCode) ||
+            string.IsNullOrWhiteSpace(manifest.SourceVersion) || string.IsNullOrWhiteSpace(manifest.TargetVersion))
+            throw new InvalidDataException("案件清單缺少必要的案件識別或版本。 ");
+        if (manifest.Routes.Count == 0)
+        {
+            if (manifest.CurrentRouteVersion != 0)
+                throw new InvalidDataException("未建立 Package／DB 工作流時目前升級路徑版本必須為 0。 ");
+            if (manifest.CoreTreeComparison is null)
+                throw new InvalidDataException("沒有升級路徑的案件必須包含 Core Tree 工作流設定。 ");
+            manifest.CoreTreeComparison.Validate();
+            return;
+        }
+        if (manifest.Routes.All(route => route.Version != manifest.CurrentRouteVersion))
             throw new InvalidDataException("案件清單沒有有效的目前升級路徑。 ");
         if (manifest.Routes.Select(route => route.Version).Distinct().Count() != manifest.Routes.Count)
             throw new InvalidDataException("案件清單包含重複的升級路徑版本。 ");
+        manifest.CoreTreeComparison?.Validate();
         foreach (var route in manifest.Routes)
         {
             var validatedRoute = UpgradeRoute.Create(route.Version, route.Hops, route.CreatedAt);
-            _ = CaseManifest.Create(manifest.CaseId, manifest.CustomerCode, manifest.SourceVersion, manifest.TargetVersion, validatedRoute, manifest.CreatedAt, manifest.ArtifactLocations);
+            _ = CaseManifest.Create(manifest.CaseId, manifest.CustomerCode, manifest.SourceVersion, manifest.TargetVersion, validatedRoute, manifest.CreatedAt, manifest.ArtifactLocations, manifest.CoreTreeComparison);
         }
     }
 }

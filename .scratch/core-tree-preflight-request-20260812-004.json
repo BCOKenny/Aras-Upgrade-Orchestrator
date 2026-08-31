@@ -1,0 +1,16 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38",
+  "actor": "BCO\\kenny",
+  "sourceVersion": "12.0 SP9 Build 12.0.0.24090",
+  "targetVersion": "15.0 SP1 Build 15.0.1.0",
+  "customerRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\customer-12sp9\\tree",
+  "customerEvidence": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\customer-12sp9\\evidence",
+  "sourceOotbRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\ootb-12sp9\\tree",
+  "sourceOotbEvidence": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\ootb-12sp9\\evidence",
+  "targetOotbRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\ootb-r38\\tree",
+  "targetOotbEvidence": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\inputs\\ootb-r38\\evidence",
+  "outputRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\attempts\\attempt-20260812-004",
+  "serverRuleVersion": "server-text-1",
+  "serverRulePaths": ["Server/method-config.xml"],
+  "safetyWhitelist": []
+}

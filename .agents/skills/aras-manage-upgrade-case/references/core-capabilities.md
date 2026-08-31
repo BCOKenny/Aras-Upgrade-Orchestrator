@@ -13,9 +13,11 @@
 | 串接受控執行 | `ControlledExecutionCoordinator` | `src/ArasUpgradeOrchestrator.Core/Execution/ControlledExecutionCoordinator.cs` |
 | 隔離未授權外部操作 | `IExternalActionExecutor`、`BlockedExternalActionExecutor` | `src/ArasUpgradeOrchestrator.Core/Execution/ExternalActions.cs` |
 
-## 目前執行面
+## Core Tree 目前執行面
 
-第一階段目前提供 .NET 類別庫與測試，尚未提供正式 UI 或 CLI command。處理程式實作工作時，直接擴充及測試上述核心；處理實際客戶案件時，在正式 UI／CLI 建立前停止，不得以手動編輯 JSON 取代正式執行面。
+正式 Core Tree CLI 位於 `tools/ArasUpgradeOrchestrator.CoreTree.Cli/`，可使用 `--create-core-tree-case` 建立不含 Package／DB 路徑的 Core Tree-only 案件，並使用 `--preflight` 與 `--request` 依序執行前置檢查及比較。`--create-core-tree-case` 建立的案件使用 `routes: []` 與 `currentRouteVersion: 0`；`.orchestrator/history.jsonl` 只會由首次正式比較 command 追加。
+
+處理實際客戶案件時，必須使用這些正式 command；不得手動編輯 JSON，也不得將缺少 Package／DB 路徑或首次比較前缺少歷程檔視為 Core Tree 工作流阻擋。
 
 驗證入口：
 

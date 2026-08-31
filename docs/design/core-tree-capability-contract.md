@@ -66,7 +66,7 @@
 
 ## 檔案、Checksum 與不可變輸入
 
-驗收案例中的非文字位元組必須以 Base64 fixture bytes 表示，解碼後的位元組必須逐一相同。交付檔案的 delivery equality 以完整位元組與 SHA-256 delivery checksums 同時驗證；內容相同但 Checksum、相對路徑或交付集合不同即不相等。
+驗收案例中的非文字位元組必須以 Base64 fixture bytes 表示，解碼後的位元組必須逐一相同。交付檔案的 delivery equality 以完整位元組與 SHA-256 delivery checksums 同時驗證；內容相同但 Checksum、相對路徑或交付集合不同即不相等。實體檔案交付還必須保留每份複本實際來源檔案的 `LastWriteTimeUtc`；C 類即使只改用 target path 或副檔名，也不得因此改變 customer／source／target 各自的來源修改時間。目的檔的 `CreationTimeUtc` 不屬於來源內容，維持新 delivery 的建立時間。
 
 三份輸入 Core Tree、輸入規則檔及驗收 fixture 都是 immutable inputs。任何能力不得修改、重新命名、刪除或覆寫它們；重試必須建立新的輸出嘗試目錄，既有結果不得覆寫。
 

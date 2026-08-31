@@ -43,9 +43,10 @@ description: Use when Codex 需要從已驗證的 Core Tree A／B／C 分類建�
 1. 保留所有輸入檔案、規則與 fixture 的 checksum；它們都是唯讀。
 2. 依正規化 relative path 穩定排序複製分類項目：A 建立 `A/CustomerSource`；B 建立 `B/CustomerSource` 與 `B/OOTBSource`；C 建立 `C/CustomerSource`、`C/OOTBSource` 與 `C/OOTBR38`。
 3. C 的 customer 與 source 檔案只採用唯一 R38 target 的路徑、檔名與副檔名；複製 bytes 必須完全不變，絕不把 JS 內容轉為 TS。A、B 保留來源名稱。
-4. 對每個交付檔計算 SHA-256，依 path 穩定排序寫入摘要與 result envelope。
-5. 有任何 `ManualReview`、`Error`、取消或中斷時，只建立 `incomplete-manifest.json`，status 為 `Incomplete`，不可建立 `completion-manifest.json`。
-6. 只有零 `ManualReview`、零 `Error`、所有複製與 checksum 成功時，能力本身才可建立 `completion-manifest.json` 與 `Completed`。
+4. A／B／C 每個交付複本都必須保留其實際來源檔案的 `LastWriteTimeUtc`；C 即使因副檔名演進改用 target 名稱，也保留 customer、source OOTB、target OOTB 各自的來源修改時間。
+5. 對每個交付檔計算 SHA-256，依 path 穩定排序寫入摘要與 result envelope。
+6. 有任何 `ManualReview`、`Error`、取消或中斷時，只建立 `incomplete-manifest.json`，status 為 `Incomplete`，不可建立 `completion-manifest.json`。
+7. 只有零 `ManualReview`、零 `Error`、所有複製、修改時間保存與 checksum 成功時，能力本身才可建立 `completion-manifest.json` 與 `Completed`。
 
 ## 不可跨越的邊界
 

@@ -2,7 +2,8 @@
 
 - 輸入識別：
 - 產品版本：
-- Edition 與 service pack：
+- Edition：Enterprise（案件預設值；Aras 安裝未區分 Edition）
+- Service Pack：
 - 證據來源：
 - 蒐集日期時間（ISO 8601）：
 - 蒐集人：

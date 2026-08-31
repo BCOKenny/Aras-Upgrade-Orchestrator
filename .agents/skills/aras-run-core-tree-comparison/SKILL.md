@@ -1,13 +1,13 @@
 ---
 name: aras-run-core-tree-comparison
-description: Use when Codex 需要從簡短要求執行或準備可重複的 Customer1209-To-R38 Core Tree 比較流程，包括前置檢查、A／B／C 比較、安全建立 attempt 及不可變案件歷程。適用於固定案件 K:\70.ArasUpgradeCases\Customer1209-To-R38 的「執行 Core Tree 前置檢查」或「執行 Core Tree 比較」等要求。
+description: Use when Codex 需要從簡短要求執行或準備可重複的案件 Core Tree 版本差異比較流程，包括前置檢查、A／B／C 比較、安全建立 attempt 及不可變案件歷程。適用於已提供案件根目錄與 `coreTreeComparison` 設定的「執行 Core Tree 前置檢查」或「執行 Core Tree 比較」等要求。
 ---
 
-# 執行 Customer1209-To-R38 Core Tree 比較
+# 執行案件 Core Tree 版本差異比較
 
-只對以下固定案件根目錄使用此 Skill：
+本 Skill 不再固定客戶或來源版本。案件根目錄必須由使用者提供，且正式 Core Tree 工作流的案件清單必須包含 `coreTreeComparison`，用來指定客戶目前版本、同版 OOTB 與最終版本 OOTB 的輸入。Package／DB 升級路徑不是本 Skill 的必要欄位。
 
-`K:\70.ArasUpgradeCases\Customer1209-To-R38`
+Core Tree 是一次性的版本差異比較，不屬於 Package／DB 升級路徑，也不依中間 Package Import 跳點重複執行。
 
 ## 解讀簡短要求
 
@@ -19,21 +19,25 @@ description: Use when Codex 需要從簡短要求執行或準備可重複的 Cus
 ## 依序路由
 
 1. 使用 `$aras-innovator-upgrade` 識別目前階段及適用關卡。
-2. 使用 `$aras-manage-upgrade-case` 讀取案件身分、執行歷程、retry eligibility、directory lock 及預定的新 attempt 路徑。
+2. 使用 `$aras-manage-upgrade-case` 讀取 Core Tree 工作流的案件身分、執行歷程、retry eligibility、directory lock 及預定的新 attempt 路徑；不得因 Package／DB 路徑尚未建立而阻擋。
 3. 使用 `$aras-compare-core-tree` 驗證輸入；只有在獲准時，才執行比較及 A／B／C 分類。
 4. 再次使用 `$aras-manage-upgrade-case` 追加不可變執行歷程。不得手動編輯歷程或自行建立 `Completed`。
 
-## 固定輸入
+對 Core Tree-only 案件，`routes: []` 與 `currentRouteVersion: 0` 是合法狀態，且在首次比較前沒有 `history.jsonl` 是預期狀態。不得讀取 `CurrentRoute`，不得要求 Package／DB 路徑，也不得將歷程檔缺失當成 preflight 或比較的阻擋原因。
 
-| 角色 | 路徑 |
+## 輸入解析
+
+從案件 `coreTreeComparison` 解析三份輸入，不得在 Skill 內寫死 `customer-12sp9` 或 `ootb-12sp9`。芯洲範例可設定為：
+
+| 角色 | 識別 |
 |---|---|
-| CustomerSource | `core-tree\inputs\customer-12sp9\tree` |
-| OOTBSource | `core-tree\inputs\ootb-12sp9\tree` |
-| OOTBR38 | `core-tree\inputs\ootb-r38\tree` |
-| Customer evidence | `core-tree\inputs\customer-12sp9\evidence` |
-| OOTB 12SP9 evidence | `core-tree\inputs\ootb-12sp9\evidence` |
-| OOTB R38 evidence | `core-tree\inputs\ootb-r38\evidence` |
-| 新 attempt 的上層目錄 | `core-tree\attempts` |
+| Customer current | `customer-11sp9` |
+| OOTB current | `ootb-11sp9` |
+| OOTB final | `ootb-r38` |
+
+每份輸入都必須包含 `tree` 與 `evidence` 的案件內相對路徑；正式 command 仍須驗證版本證據與 `Innovator\Client`／`Innovator\Server`。
+
+新 attempt 的上層目錄：`core-tree\attempts`
 
 所有相對路徑都必須以固定案件根目錄解析。將三份輸入 tree 視為不可變，並拒絕任何輸入與輸出路徑重疊的情況。
 
@@ -42,7 +46,7 @@ description: Use when Codex 需要從簡短要求執行或準備可重複的 Cus
 - 使用正式且已受測的 Core Tree command/action；不得手動模擬比較。
 - 不得從目錄名稱推測版本。
 - 不得預先建立、重用或覆寫 attempt 目錄。
-- 遇到多個 R38 candidate 時不得猜測；保留所有 candidate 等待人工確認。
+- 遇到多個最終版本 candidate 時不得猜測；保留所有 candidate 等待人工確認。
 - 遵循 `$aras-compare-core-tree` 及其路由子 Skill 提供的文字／binary 比較與副檔名演進規則。
 - 只允許正式工作流程判定 `Incomplete` 或 `Completed`；未解決的人工確認不得自動解除。
 

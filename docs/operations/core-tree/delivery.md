@@ -41,7 +41,7 @@ exit code `0` 是 `Completed`；`2` 是安全或證據阻擋；`1` 是 request �
   delivery-manifest.json
 ```
 
-`delivery-manifest.json` 保存每個交付檔案的 SHA-256。C 類 CustomerSource／OOTBSource 使用 R38 的目標相對路徑，但複製的內容 bytes 不轉換；C/OOTBR38 則是該目標檔案的原始 bytes。
+`delivery-manifest.json` 保存每個交付檔案的 SHA-256。C 類 CustomerSource／OOTBSource 使用 R38 的目標相對路徑，但複製的內容 bytes 不轉換；C/OOTBR38 則是該目標檔案的原始 bytes。所有 A／B／C 交付複本均保留各自來源檔案的 `LastWriteTimeUtc`；即使 C 類發生 `.js` → `.ts` 等命名演進，也不改變來源修改時間。目的檔的 `CreationTimeUtc` 仍是建立新 delivery 的時間。
 
 成功後 history 只追加 `core-tree.delivery.completed`。同一 comparison attempt 不得建立第二份 delivery。若複製中斷，該新目錄只能留下 `incomplete-manifest.json`，不得產生 `delivery-manifest.json`。
 

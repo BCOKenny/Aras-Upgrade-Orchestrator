@@ -15,6 +15,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("升級路徑拒絕不連續跳點", RouteRejectsDiscontinuity),
     ("任務圖區分 Package 子任務與依序跳點執行", TaskGraphBuildsDependencies),
     ("案件清單可建立及驗證讀回", CaseManifestRoundTrips),
+    ("Core Tree 工作流案件可無 Package DB 路徑建立及讀回", CoreTreeWorkflowCaseRoundTripsWithoutRoute),
     ("既有升級路徑只能追加新版不能改寫", ExistingRouteCannotBeRewritten),
     ("歷程只追加且更正保留原事件", HistoryIsAppendOnly),
     ("失敗後無安全證據不得重試", RetryRequiresEvidence),
@@ -107,6 +108,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree preflight 將只有 provenance 的 evidence 標示為 Incomplete", CoreTreePreflightMarksProvenanceOnlyEvidenceIncompleteWithoutMutation)
     ,("Core Tree 測試 CLI 暴露固定 command JSON 入口", CoreTreeTestCliContract)
     ,("Core Tree CLI preflight 回傳 Ready JSON 且不變更案件", CoreTreeCliPreflightReturnsReadyWithoutMutation)
+    ,("Core Tree CLI 可建立不含 Package DB 路徑的正式案件", CoreTreeCliCreatesWorkflowCaseWithoutRoute)
     ,("Core Tree CLI preflight 阻擋結果回傳 exit code 2", CoreTreeCliPreflightReturnsBlocked)
     ,("Core Tree CLI preflight 拒絕格式錯誤 request 並回傳 exit code 1", CoreTreeCliPreflightRejectsMalformedRequest)
     ,("Core Tree CLI --request 維持既有 usage exit code 2", CoreTreeCliRequestUsagePreservesLegacyExitCode)
@@ -229,6 +231,28 @@ static async Task RetryRequiresEvidence()
     var second = await service.StartAsync(snapshot, "operator", new RetryEvidence(RetryBasis.RolledBack, "rollback-proof-1"));
     Assert.Equal(2, second.Sequence);
     Assert.NotEqual(first.AttemptId, second.AttemptId);
+}
+
+static async Task CoreTreeWorkflowCaseRoundTripsWithoutRoute()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition(
+        "customer-11sp9", "ootb-11sp9", "ootb-r38",
+        "core-tree/inputs/customer-11sp9/tree", "core-tree/inputs/customer-11sp9/evidence",
+        "core-tree/inputs/ootb-11sp9/tree", "core-tree/inputs/ootb-11sp9/evidence",
+        "core-tree/inputs/ootb-r38/tree", "core-tree/inputs/ootb-r38/evidence",
+        "customer-11sp9-To-ootb-r38");
+    var manifest = CaseManifest.CreateCoreTreeWorkflow(
+        Guid.NewGuid(), "CUST-A", "11.0 SP9", "R38", definition, DateTimeOffset.UtcNow);
+    var store = new CaseStore(scope.CaseRoot);
+
+    await store.CreateAsync(manifest);
+    var loaded = await store.LoadAsync();
+
+    Assert.Equal(0, loaded.CurrentRouteVersion);
+    Assert.Equal(0, loaded.Routes.Count);
+    Assert.Equal(definition.ComparisonName, loaded.CoreTreeComparison!.ComparisonName);
+    Assert.Throws<InvalidOperationException>(() => _ = loaded.CurrentRoute);
 }
 
 static async Task IncompleteRetryRequiresVerifiedIdempotency()
@@ -1908,8 +1932,20 @@ static async Task CoreTreeDeliveryBuildsIndependentOutput()
     Assert.True(delivery.Status == CoreTreeDeliveryStatus.Completed, delivery.Message);
     Assert.Equal(14, delivery.OutputFileCount);
     Assert.True(File.Exists(delivery.DeliveryManifestPath));
-    Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(delivery.DeliveryManifestPath)!, "A", "CustomerSource", "Client", "a.js")));
-    Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(delivery.DeliveryManifestPath)!, "C", "CustomerSource", "Client", "c.ts")));
+    var deliveryRoot = Path.GetDirectoryName(delivery.DeliveryManifestPath)!;
+    var customerRoot = Path.Combine(scope.Root, "inputs", "customer", "Innovator");
+    var sourceOotbRoot = Path.Combine(scope.Root, "inputs", "source-ootb", "Innovator");
+    var targetOotbRoot = Path.Combine(scope.Root, "inputs", "target-ootb", "Innovator");
+    Assert.True(File.Exists(Path.Combine(deliveryRoot, "A", "CustomerSource", "Client", "a.js")));
+    Assert.True(File.Exists(Path.Combine(deliveryRoot, "C", "CustomerSource", "Client", "c.ts")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(customerRoot, "Client", "a.js")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "A", "CustomerSource", "Client", "a.js")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(customerRoot, "Client", "b.js")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "B", "CustomerSource", "Client", "b.js")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(sourceOotbRoot, "Client", "b.js")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "B", "OOTBSource", "Client", "b.js")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(customerRoot, "Client", "c.js")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "C", "CustomerSource", "Client", "c.ts")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(sourceOotbRoot, "Client", "c.js")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "C", "OOTBSource", "Client", "c.ts")));
+    Assert.Equal(File.GetLastWriteTimeUtc(Path.Combine(targetOotbRoot, "Client", "c.ts")), File.GetLastWriteTimeUtc(Path.Combine(deliveryRoot, "C", "OOTBR38", "Client", "c.ts")));
+    Assert.True((await File.ReadAllBytesAsync(Path.Combine(customerRoot, "Client", "c.js"))).SequenceEqual(
+        await File.ReadAllBytesAsync(Path.Combine(deliveryRoot, "C", "CustomerSource", "Client", "c.ts"))));
     Assert.False(File.Exists(Path.Combine(fixture.ComparisonRoot, "delivery-manifest.json")));
     var history = await ReadAll(new AppendOnlyHistoryStore(scope.ToolDataRoot));
     Assert.Equal(HistoryEventTypes.CoreTreeDeliveryCompleted, history.Last().EventType);
@@ -1998,6 +2034,12 @@ static async Task<FinalizationFixture> CreateFinalizationFixture(TestScope scope
         await WriteCoreTreeFile(Path.Combine(sourceOotbRoot, "Innovator"), relative, "source-" + relative);
     foreach (var relative in new[] { "Client/c.ts", "Client/d.js", "Client/e.js", "Server/bin/example.dll" })
         await WriteCoreTreeFile(Path.Combine(targetOotbRoot, "Innovator"), relative, "target-" + relative);
+    File.SetLastWriteTimeUtc(Path.Combine(customerRoot, "Innovator", "Client", "a.js"), DateTime.Parse("2021-01-01T01:02:03Z").ToUniversalTime());
+    File.SetLastWriteTimeUtc(Path.Combine(customerRoot, "Innovator", "Client", "b.js"), DateTime.Parse("2021-02-02T02:03:04Z").ToUniversalTime());
+    File.SetLastWriteTimeUtc(Path.Combine(sourceOotbRoot, "Innovator", "Client", "b.js"), DateTime.Parse("2020-02-02T02:03:04Z").ToUniversalTime());
+    File.SetLastWriteTimeUtc(Path.Combine(customerRoot, "Innovator", "Client", "c.js"), DateTime.Parse("2021-03-03T03:04:05Z").ToUniversalTime());
+    File.SetLastWriteTimeUtc(Path.Combine(sourceOotbRoot, "Innovator", "Client", "c.js"), DateTime.Parse("2020-03-03T03:04:05Z").ToUniversalTime());
+    File.SetLastWriteTimeUtc(Path.Combine(targetOotbRoot, "Innovator", "Client", "c.ts"), DateTime.Parse("2025-03-03T03:04:05Z").ToUniversalTime());
     var items = new[]
     {
         new CoreTreeClassifiedItem(CoreTreeClassification.A, "Client/a.js", null),
@@ -2291,6 +2333,51 @@ static async Task CoreTreeCliPreflightReturnsReadyWithoutMutation()
     Assert.Equal((int)CoreTreePreflightStatus.Ready, document.RootElement.GetProperty("status").GetInt32());
     Assert.Equal(before, SnapshotTree(scope.CaseRoot));
     Assert.False(Directory.Exists(request.OutputRoot));
+    Assert.False(File.Exists(Path.Combine(scope.CaseRoot, CaseStore.ToolDataDirectoryName, AppendOnlyHistoryStore.FileName)));
+}
+
+static async Task CoreTreeCliCreatesWorkflowCaseWithoutRoute()
+{
+    await using var scope = TestScope.Create();
+    foreach (var inputId in new[] { "customer-11sp9", "ootb-11sp9", "ootb-r38" })
+    {
+        var inputRoot = Path.Combine(scope.CaseRoot, "core-tree", "inputs", inputId);
+        Directory.CreateDirectory(Path.Combine(inputRoot, "tree", "Innovator", "Client"));
+        Directory.CreateDirectory(Path.Combine(inputRoot, "tree", "Innovator", "Server"));
+        Directory.CreateDirectory(Path.Combine(inputRoot, "evidence"));
+        await File.WriteAllTextAsync(Path.Combine(inputRoot, "evidence", "version-primary.md"), "version");
+        await File.WriteAllTextAsync(Path.Combine(inputRoot, "evidence", "integrity.md"), "integrity");
+        await File.WriteAllTextAsync(Path.Combine(inputRoot, "evidence", "integrity.sha256"), "hash");
+        await File.WriteAllTextAsync(Path.Combine(inputRoot, "evidence", "source-provenance.md"), "source");
+    }
+
+    var requestPath = Path.Combine(scope.Root, "create-core-tree-case.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        scope.CaseRoot,
+        CustomerCode = "CUST-A",
+        SourceVersion = "11.0 SP9",
+        TargetVersion = "R38",
+        CustomerInputId = "customer-11sp9",
+        SourceOotbInputId = "ootb-11sp9",
+        TargetOotbInputId = "ootb-r38",
+        CustomerTreePath = "core-tree/inputs/customer-11sp9/tree",
+        CustomerEvidencePath = "core-tree/inputs/customer-11sp9/evidence",
+        SourceOotbTreePath = "core-tree/inputs/ootb-11sp9/tree",
+        SourceOotbEvidencePath = "core-tree/inputs/ootb-11sp9/evidence",
+        TargetOotbTreePath = "core-tree/inputs/ootb-r38/tree",
+        TargetOotbEvidencePath = "core-tree/inputs/ootb-r38/evidence",
+        ComparisonName = "customer-11sp9-To-ootb-r38"
+    }));
+
+    var result = await RunCoreTreeCliAsync("--create-core-tree-case", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var document = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal("CoreTree", document.RootElement.GetProperty("workflow").GetString());
+    var manifest = await new CaseStore(scope.CaseRoot).LoadAsync();
+    Assert.Equal(0, manifest.Routes.Count);
+    Assert.True(manifest.CoreTreeComparison is not null);
     Assert.False(File.Exists(Path.Combine(scope.CaseRoot, CaseStore.ToolDataDirectoryName, AppendOnlyHistoryStore.FileName)));
 }
 

@@ -1,0 +1,15 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38",
+  "actor": "BCO\\kenny",
+  "comparisonOutputRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\attempts\\attempt-20260812-004",
+  "completionManifestPath": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\completions\\completion-20260812-002\\completion-manifest.json",
+  "deliveryOutputRoot": "K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\deliveries\\delivery-20260812-001",
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.build-delivery",
+      "actionVersion": "1",
+      "allowedTargetRoots": ["K:\\70.ArasUpgradeCases\\Customer1209-To-R38\\core-tree\\deliveries"],
+      "requiredPrerequisites": ["case.loaded", "comparison.completed", "comparison.evidence.valid", "inputs.immutable", "manual.reviews.applied", "delivery.output.new"]
+    }
+  ]
+}

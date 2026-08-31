@@ -1,7 +1,7 @@
 # Aras Innovator 升級協調工具－需求規格
 
-狀態：需求訪談已確認，尚未進入程式實作  
-確認日期：2026-08-01  
+狀態：核心能力已實作；Core Tree／Package 分流規格調整中  
+確認日期：2026-08-28  
 適用專案：Aras Upgrade Orchestrator
 
 ## 1. 目的
@@ -90,19 +90,52 @@
 - 未處置人工確認項目不得交付。
 - AI不得發布規則、執行高風險動作或解除阻擋。
 
+### 4.5 參數驗證模式
+
+`VALIDATE_ONLY` 是建立正式案件前的非變更參數驗證模式，不等同於正式案件檢查或升級前置檢查。此模式只驗證客戶、版本、短名稱、案件目標路徑、外部根目錄白名單格式及 Core Tree 識別推導。
+
+在 `VALIDATE_ONLY` 中不得要求或載入正式 `CaseManifest`、連續升級跳點、SOP、Package／DB 路徑、官方 Patch、Support、Build、DB 備份或正式歷程。案件目錄或正式案件清單不存在時只能回報資訊，不得標記為 `Blocked`。格式與路徑通過時固定回報 `VALIDATION_ONLY: PASS`；只有參數格式、佔位符、版本一致性或路徑安全錯誤才回報 `VALIDATION_ONLY: INVALID`。完成輸出後立即結束，不進入建立案件或受控執行流程。
+
+### 4.6 目錄骨架建立模式
+
+`DIRECTORY_SCAFFOLD_ONLY` 是受控且有限範圍的正式目錄建立動作，用於正式案件建立入口與升級路徑尚未準備完成時，在外部案件根目錄下建立目錄及非正式範本。它不需要另一個獨立 UI／CLI 作為前置條件；執行器必須使用已完成語法驗證的固定腳本，並在實際寫入前完成本節的安全檢查。此模式不得建立或偽造正式 `CaseManifest`、`aras-upgrade-case.json` 或 `.orchestrator\history.jsonl`，也不要求連續升級跳點、SOP、Patch、Support、Build 或 DB 證據。
+
+此模式仍須通過使用者對固定案件根目錄的明確本次授權、執行環境寫入權限、目標隔離、既有資料及鎖檢查；條件不足時阻擋且不得改寫到專案目錄。執行環境尚未授權寫入時，必須請求該固定根目錄的單次提升權限，不得以「缺少另一個 DIRECTORY_SCAFFOLD_ONLY command/action」作為阻擋原因。目錄骨架完成後，可依已具備的資料分別進入正式 Core Tree 工作流或正式 Package／DB 工作流；兩者不互相等待。
+
+### 4.7 正式工作流獨立性
+
+同一客戶案件可包含兩條可追溯但獨立的正式工作流：
+
+1. **Core Tree 工作流**：以三份已驗證的 `tree` 與 evidence 建立正式 Core Tree 案件設定，執行 preflight、比較及 A／B／C 交付。不要求 Package／DB 升級路徑、Patch 或 Support 證據。
+2. **Package／DB 工作流**：以連續升級跳點、每跳官方 Patch／Support、Package 與 DB 證據建立正式升級路徑。它不以 Core Tree 比較結果作為開始條件。
+
+兩條工作流可在目錄不重疊時平行進行；只有最終交付需要同時檢查兩者的完成狀態。正式建立能力必須依所建立的工作流套用相對應的驗證規則，不得把 Package／DB 路徑要求套用到 Core Tree 工作流。
+
+### 4.8 本地編排與腳本傳遞
+
+由 Markdown Prompt 觸發的本地腳本必須將文件內容與可執行內容分離。任何送往 JavaScript、PowerShell 或執行器的內容不得包含反引號、JavaScript template literal、`String.raw`、Markdown 行內程式碼標記或 Markdown 程式碼圍欄。
+
+- Windows 路徑在 JavaScript 中只能使用雙反斜線的普通字串，例如 `"K:\\70.ArasUpgradeCases"`。
+- 多行 PowerShell 必須先寫入並完成解析的暫存 `.ps1`，再以 `powershell -File` 執行；不得以 Markdown 文字或 `powershell -Command` 單行字串直接組裝。
+- 提供給 Windows PowerShell 的 `.ps1` 必須使用 UTF-8 with BOM，且可執行腳本來源只使用 ASCII。非 ASCII 的客戶或案件名稱必須由 Unicode code point 數字陣列與 `[char]::ConvertFromUtf32()` 在執行期重建，不得直接寫入腳本來源或命令列。
+- 所有目標目錄與範本檔的路徑、範圍、既有狀態與名稱必須在零寫入預檢中完整驗證；預檢完成前不得建立部分目錄。編碼或腳本失敗後不得自動刪除或重試，必須列出唯一失敗產物完整路徑並取得使用者明確清理核准。
+- 編排或解析失敗時，尚未送達 PowerShell 視為零寫入；必須停止並回報原始錯誤，不得修改轉義、語法或路徑後自動重試。
+
 ## 5. 案件、目錄與歷程
 
 ### 5.1 案件清單
 
-每個客戶升級目錄根層必須有案件清單，至少記錄：
+每個客戶升級目錄根層必須有案件清單，至少記錄下列共用欄位：
 
 - 案件識別；
 - 客戶代號；
 - 來源與目標版本；
 - 建立時間；
-- 目前升級路徑；
-- 各跳點客戶專用 `Support` 目錄；
+- 已啟用的工作流及其各自狀態；
+- Core Tree 工作流的 `coreTreeComparison` 設定與產出位置；
 - 產出、備份與現行封存版本位置。
+
+只有啟用 Package／DB 工作流時，案件清單才必須另記錄目前升級路徑、各跳點客戶專用 `Support` 目錄，以及每跳 Patch／Support 證據。只有啟用 Core Tree 工作流時，案件清單才必須要求三份 Core Tree 輸入與 evidence。
 
 工具不得只依資料夾名稱判斷案件。清單缺失、版本不符或輸入屬於其他案件時，受控動作必須阻擋。
 
@@ -114,6 +147,14 @@
 - Core Tree 不位於 `Support` 內，另行登錄及比較。
 - K: 等 Windows 對應磁碟路徑可作為登錄位置。
 
+### 5.2.1 外部案件根目錄
+
+- 案件資料可放在專案目錄外的固定 Windows 路徑，例如 `K:\70.ArasUpgradeCases`。
+- `DIRECTORY_SCAFFOLD_ONLY` 的根目錄授權由使用者在本次要求中明確指定固定完整路徑，例如 `K:\70.ArasUpgradeCases`；不得接受磁碟根目錄、萬用字元、`..` 或動態拼接出的廣泛路徑。
+- 執行環境仍須授予該固定根目錄的實際寫入權限。環境可另提供持久安全白名單，但它不是 `DIRECTORY_SCAFFOLD_ONLY` 的唯一授權入口。
+- 專案編輯限制只約束專案原始碼、文件與設定；不應把使用者已明確授權的外部案件根目錄誤判為專案檔案。但外部路徑仍必須通過執行環境權限。
+- `VALIDATE_ONLY` 只驗證外部路徑，不寫入；`DIRECTORY_SCAFFOLD_ONLY` 在本次固定根目錄授權、權限與安全檢查通過後，才可建立案件骨架。
+
 ### 5.3 工具專用資料
 
 工具在案件根目錄的專用區域保存：
@@ -121,9 +162,11 @@
 - 案件清單與執行紀錄；
 - 客戶 Package 來源工作副本；
 - 原始 `Solutions` 備份；
-- OOTB 跳點差異包；
-- Core Tree 比較產出；
+- Package 各跳點的官方 Patch、工作副本、備份及匯入證據；
+- Core Tree 版本差異比較產出；
 - 差異與驗證摘要。
+
+Core Tree 與 Package／DB 升級必須使用不同的工作區、任務識別與歷程事件類型。Core Tree 不依 Package／DB 跳點產生中間版本產出，也不等待其路徑建立；Package／DB 跳點不以 Core Tree 分類結果取代官方 Patch 或 Package Import，也不等待 Core Tree 完成才可開始。
 
 ### 5.4 不可覆寫歷程
 
@@ -151,9 +194,11 @@
 
 ### 6.1 術語
 
-- **跳點 Package 子任務**：父任務「Package 比較／產生升級 Package」下，準備特定版本區間正式適配 Package 的子任務。
-- **跳點執行**：實際將 DB 從來源版本升級至下一版本的執行節點，不是 Package 子任務。
-- **升級路徑**：操作人員依已驗證原廠文件選定的有序跳點執行集合。
+- **Package Import 跳點**：依 Aras 官方 Patch 與 Support，將 DB／Package 從來源版本推進至下一版本的單一階段。
+- **跳點 Package 子任務**：為一個 Package Import 跳點準備、驗證及封存官方 Patch／正式適配 Package 的子任務。
+- **跳點執行**：操作人員依 SOP 實際執行該 Package Import 跳點及 DB 變更的執行節點，不是 Core Tree 比較。
+- **Core Tree 版本差異比較**：以客戶目前版本、同版 OOTB 與最終版本 OOTB 為輸入的獨立比較任務。
+- **升級路徑**：只描述 Package／DB Import 跳點，不包含 Core Tree 比較的中間版本。
 
 ### 6.2 路徑決策
 
@@ -167,7 +212,7 @@
 ```mermaid
 flowchart TD
     RE["重建客戶環境"] --> CP["產生客戶 Package"]
-    CP --> PP["Package 比較／產生升級 Package"]
+    CP --> PP["Package／官方 Patch 準備"]
 
     PP --> P1["跳點 Package 子任務 1"]
     PP --> P2["跳點 Package 子任務 2"]
@@ -180,9 +225,9 @@ flowchart TD
     P3 --> E3
     E3 --> DB["R38 DB"]
 
-    CC["客戶來源 Core Tree"] --> CT["比較及分類 Core Tree"]
-    CS["來源版本 OOTB Core Tree"] --> CT
-    CR["R38 OOTB Core Tree"] --> CT
+    CC["客戶目前版本 Core Tree"] --> CT["Core Tree 版本差異比較"]
+    CS["目前版本 OOTB Core Tree"] --> CT
+    CR["最終版本 OOTB Core Tree"] --> CT
     CT --> CO["Core Tree 比較產出"]
 
     DB --> D["最終交付"]
@@ -192,7 +237,7 @@ flowchart TD
 - 各跳點 Package 子任務可分開或平行準備。
 - 每個跳點執行等待自己的正式適配 Package。
 - 第二個以後的跳點執行同時等待前一個跳點執行完成。
-- Core Tree 是獨立任務，不阻擋 Package 準備或 DB 升級，但最終交付必須等待其完成。
+- Core Tree 是獨立任務，可在三份輸入 evidence 完成後立即建立正式 Core Tree 工作流並執行；它不阻擋 Package 準備或 DB 升級，但最終交付必須等待其完成。
 
 ## 7. 客戶 Package 一次性產生流程
 
@@ -238,7 +283,7 @@ AI不得產生、修改或自由組合 SQL。DB 還原始終由操作人員手�
 
 ### 8.1 用途
 
-Rule 1 可獨立比較兩個 OOTB 版本，例如 `OOTB 12SP9→OOTB 12SP18`，預先縮小後續客戶 Package 比較量。此能力納入第一版。
+Rule 1 只適用於 Package Import 跳點的官方 OOTB Package 差異，例如 `OOTB 12SP9→OOTB 12SP18`。它不適用於 Core Tree 版本差異比較，也不要求 Core Tree 依每個 DB 跳點重複比較。
 
 ### 8.2 不可變輸入與工作副本
 
@@ -564,11 +609,13 @@ Item XML Attributes 不由 Scalar Property 規則更新。Item Property 不得�
 - 不得只勾選「已處理」解除阻擋。
 - 重新驗證建立新的執行嘗試，保留原人工確認原因及結果。
 
-## 14. Core Tree 比較與分類
+## 14. Core Tree 版本差異比較與分類
 
 ### 14.1 責任邊界
 
-- Core Tree 是獨立單一任務。
+- Core Tree 是獨立單一任務，與 Package／DB 升級路徑分離。
+- Core Tree 只比較客戶目前版本與最終版本之間的差異；中間 DB／Package 跳點不產生 Core Tree 比較任務。
+- Core Tree 不需要等待 Package Import 跳點完成，也不會解除任何 DB 跳點的前置條件。
 - 本工具只比較、分類及輸出，不合併、不修改 R38 Core Tree。
 - 正式節點名稱為「比較及分類 Core Tree」。
 - 產出名稱為「Core Tree 比較產出」。
@@ -576,9 +623,9 @@ Item XML Attributes 不由 Scalar Property 規則更新。Item Property 不得�
 
 ### 14.2 三份輸入
 
-1. 客戶來源版本 Core Tree。
-2. 相同來源版本 OOTB Core Tree。
-3. R38 OOTB Core Tree。
+1. 客戶目前版本 Core Tree。
+2. 相同目前版本 OOTB Core Tree。
+3. 案件最終版本 OOTB Core Tree（本案例為 R38）。
 
 開始前必須驗證：
 
@@ -681,7 +728,8 @@ C/
 
 ### 15.1 執行方式
 
-- 各跳點由升級人員手動操作正式適配後的 Aras 升級工具。
+- 各 Package Import 跳點由升級人員依 SOP 手動操作對應 Aras 官方 Patch／Support 與正式適配後的 Aras 升級工具。
+- 每一個 Package Import 跳點都必須綁定明確的來源 DB 版本、目標 DB 版本及官方 Patch 證據。
 - 協調工具不啟動或控制升級工具。
 - 協調工具管理前置條件、Runbook、開始／結束時間、Log 與證據。
 
@@ -750,7 +798,7 @@ C/
 6. Package 比較遵守 AML 共用標準、專用 CompareKey、Rule 1／Rule 2 及人工確認規則。
 7. Package 非 XML 檔案保持原樣；空 AML 不刪檔也不改 manifest。
 8. 規則可建立草稿、驗證及發布新版本，但安全不變條件不可修改。
-9. Core Tree 只有取得三份正確版本輸入後才能執行。
+9. Core Tree 只有取得三份正確版本輸入與 evidence 後才能執行；Package／DB 升級路徑、Patch 與 Support 不是 Core Tree 工作流的前置條件。
 10. Core Tree 能正確產生 A／B／C，處理副檔名演進、多候選、文字及二進位比較。
 11. Core Tree 中斷產出不能被誤當 `Completed` 交付。
 12. DB 跳點執行保持人工操作，且下一跳點等待登入驗證及 DB 備份證據。
@@ -771,4 +819,3 @@ C/
 - Package 逐 XML Checksum；
 - Package manifest 安全同步刪檔；
 - Package 非 XML 比較與調整。
-

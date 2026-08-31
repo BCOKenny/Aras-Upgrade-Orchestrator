@@ -1,0 +1,42 @@
+{
+  "caseId": "<GENERATED-UUID>",
+  "customerCode": "Xinzhou",
+  "sourceVersion": "11.0 SP9 Build <OPERATOR-PROVIDED>",
+  "targetVersion": "12.0 SP9 Build <OPERATOR-PROVIDED>",
+  "caseRoot": "<CASE_ROOT>\\Xinzhou-To-12SP9",
+  "createdAt": "<ISO-8601>",
+  "schemaVersion": 1,
+  "currentRouteVersion": 1,
+  "routes": [
+    {
+      "version": 1,
+      "hops": [
+        {
+          "sourceVersion": "11.0 SP9 Build <OPERATOR-PROVIDED>",
+          "targetVersion": "12.0 SP9 Build <OPERATOR-PROVIDED>",
+          "supportDirectory": "<CASE_ROOT>\\Xinzhou-To-12SP9\\hops\\11sp9-to-12sp9\\support\\target-12sp9",
+          "sopReference": "K:\\03.升級工具及手順\\11sp9TO12sp9\\11sp9升级12sp9工作手顺.xlsx"
+        }
+      ],
+      "createdAt": "<ISO-8601>"
+    }
+  ],
+  "coreTreeComparison": {
+    "customerInputId": "customer-11sp9",
+    "sourceOotbInputId": "ootb-11sp9",
+    "targetOotbInputId": "ootb-r38",
+    "customerTreePath": "core-tree\\inputs\\customer-11sp9\\tree",
+    "customerEvidencePath": "core-tree\\inputs\\customer-11sp9\\evidence",
+    "sourceOotbTreePath": "core-tree\\inputs\\ootb-11sp9\\tree",
+    "sourceOotbEvidencePath": "core-tree\\inputs\\ootb-11sp9\\evidence",
+    "targetOotbTreePath": "core-tree\\inputs\\ootb-r38\\tree",
+    "targetOotbEvidencePath": "core-tree\\inputs\\ootb-r38\\evidence",
+    "comparisonName": "customer-11sp9-To-ootb-r38"
+  },
+  "artifactLocations": [
+    "<CASE_ROOT>\\Xinzhou-To-12SP9\\inputs",
+    "<CASE_ROOT>\\Xinzhou-To-12SP9\\hops",
+    "<CASE_ROOT>\\Xinzhou-To-12SP9\\core-tree",
+    "<CASE_ROOT>\\Xinzhou-To-12SP9\\handoff"
+  ]
+}

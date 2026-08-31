@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ArasUpgradeOrchestrator.Core.Cases;
 
 public sealed record UpgradeHop(string SourceVersion, string TargetVersion, string SupportDirectory)
@@ -30,6 +32,36 @@ public sealed record UpgradeRoute(int Version, IReadOnlyList<UpgradeHop> Hops, D
 
 public sealed record ArtifactLocation(string Kind, string Path, string? HopKey = null);
 
+public sealed record CoreTreeComparisonDefinition(
+    string CustomerInputId,
+    string SourceOotbInputId,
+    string TargetOotbInputId,
+    string CustomerTreePath,
+    string CustomerEvidencePath,
+    string SourceOotbTreePath,
+    string SourceOotbEvidencePath,
+    string TargetOotbTreePath,
+    string TargetOotbEvidencePath,
+    string ComparisonName)
+{
+    public void Validate()
+    {
+        foreach (var value in new[] { CustomerInputId, SourceOotbInputId, TargetOotbInputId, ComparisonName })
+            if (string.IsNullOrWhiteSpace(value)) throw new InvalidDataException("Core Tree 比較識別不可為空。 ");
+
+        foreach (var path in new[]
+        {
+            CustomerTreePath, CustomerEvidencePath, SourceOotbTreePath, SourceOotbEvidencePath,
+            TargetOotbTreePath, TargetOotbEvidencePath
+        })
+        {
+            if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path) || path.StartsWith('\\') || path.StartsWith('/') ||
+                path.Split(new[] { '/', '\\' }, StringSplitOptions.None).Any(segment => segment is "" or "." or ".."))
+                throw new InvalidDataException("Core Tree 比較路徑必須是案件根目錄下的安全相對路徑。 ");
+        }
+    }
+}
+
 public sealed record CaseManifest(
     int SchemaVersion,
     Guid CaseId,
@@ -39,11 +71,15 @@ public sealed record CaseManifest(
     DateTimeOffset CreatedAt,
     int CurrentRouteVersion,
     IReadOnlyList<UpgradeRoute> Routes,
-    IReadOnlyList<ArtifactLocation> ArtifactLocations)
+    IReadOnlyList<ArtifactLocation> ArtifactLocations,
+    CoreTreeComparisonDefinition? CoreTreeComparison = null)
 {
     public const int CurrentSchemaVersion = 1;
 
-    public UpgradeRoute CurrentRoute => Routes.Single(route => route.Version == CurrentRouteVersion);
+    [JsonIgnore]
+    public UpgradeRoute CurrentRoute => Routes.Count > 0
+        ? Routes.Single(route => route.Version == CurrentRouteVersion)
+        : throw new InvalidOperationException("此案件尚未建立 Package／DB 升級路徑。 ");
 
     public static CaseManifest Create(
         Guid caseId,
@@ -52,7 +88,8 @@ public sealed record CaseManifest(
         string targetVersion,
         UpgradeRoute route,
         DateTimeOffset createdAt,
-        IEnumerable<ArtifactLocation>? artifactLocations = null)
+        IEnumerable<ArtifactLocation>? artifactLocations = null,
+        CoreTreeComparisonDefinition? coreTreeComparison = null)
     {
         if (caseId == Guid.Empty) throw new ArgumentException("案件識別不可為空。", nameof(caseId));
         if (string.IsNullOrWhiteSpace(customerCode)) throw new ArgumentException("客戶代號不可為空。", nameof(customerCode));
@@ -69,14 +106,46 @@ public sealed record CaseManifest(
             createdAt,
             route.Version,
             [route],
-            artifactLocations?.ToArray() ?? []);
+            artifactLocations?.ToArray() ?? [],
+            coreTreeComparison);
+    }
+
+    public static CaseManifest CreateCoreTreeWorkflow(
+        Guid caseId,
+        string customerCode,
+        string sourceVersion,
+        string targetVersion,
+        CoreTreeComparisonDefinition coreTreeComparison,
+        DateTimeOffset createdAt,
+        IEnumerable<ArtifactLocation>? artifactLocations = null)
+    {
+        if (caseId == Guid.Empty) throw new ArgumentException("案件識別不可為空。", nameof(caseId));
+        if (string.IsNullOrWhiteSpace(customerCode)) throw new ArgumentException("客戶代號不可為空。", nameof(customerCode));
+        if (string.IsNullOrWhiteSpace(sourceVersion) || string.IsNullOrWhiteSpace(targetVersion))
+            throw new ArgumentException("案件來源與目標版本不可為空。 ");
+        if (string.Equals(sourceVersion, targetVersion, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Core Tree 案件來源與目標版本不可相同。 ");
+        ArgumentNullException.ThrowIfNull(coreTreeComparison);
+        coreTreeComparison.Validate();
+
+        return new CaseManifest(
+            CurrentSchemaVersion,
+            caseId,
+            customerCode.Trim(),
+            sourceVersion.Trim(),
+            targetVersion.Trim(),
+            createdAt,
+            0,
+            [],
+            artifactLocations?.ToArray() ?? [],
+            coreTreeComparison);
     }
 
     public CaseManifest AddRouteVersion(UpgradeRoute route)
     {
         if (Routes.Any(existing => existing.Version == route.Version))
             throw new InvalidOperationException($"升級路徑版本 {route.Version} 已存在。 ");
-        if (route.Version <= Routes.Max(existing => existing.Version))
+        if (Routes.Count > 0 && route.Version <= Routes.Max(existing => existing.Version))
             throw new InvalidOperationException("新升級路徑版本必須大於所有既有版本。 ");
         if (!string.Equals(route.Hops[0].SourceVersion, SourceVersion, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(route.Hops[^1].TargetVersion, TargetVersion, StringComparison.OrdinalIgnoreCase))

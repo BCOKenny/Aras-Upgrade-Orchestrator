@@ -15,9 +15,17 @@ description: 以證據與階段關卡總協調 Aras Innovator 升級，判斷案
 2. 讀取 `references/project-facts.md` 與 `references/terminology.md`。
 3. 準備演練、執行、驗證或交付時，讀取 `references/upgrade-checkpoints.md`。
 4. 讀取 `docs/design/skill-map.md`，確認功能 Skill 的責任與建置狀態。
-5. 若已提供案件根目錄，先路由 `aras-manage-upgrade-case` 讀取案件清單與執行歷程；不得只依資料夾名稱判斷案件。
+5. 若已提供案件根目錄且不是 `VALIDATE_ONLY`，先路由 `aras-manage-upgrade-case` 讀取案件清單與執行歷程；不得只依資料夾名稱判斷案件。
 
 ## 判定目前階段
+
+### `VALIDATE_ONLY` 優先規則
+
+若要求明確包含 `執行模式：VALIDATE_ONLY`，本次只做案件參數與預期路徑驗證，不屬於正式升級案件的「盤點」或「規劃」階段。不得依一般流程先路由 `aras-manage-upgrade-case` 讀取正式案件清單，也不得以正式 `CaseManifest` 的連續跳點要求阻擋驗證。
+
+此模式只能回報 `VALIDATION_ONLY: PASS` 或 `VALIDATION_ONLY: INVALID`，不得回報 `Blocked`。正式 SOP、Package／DB 路徑、Patch、Support 與案件清單僅能列為未來切換 `SCAFFOLD_ONLY` 或正式升級時的待補資料。
+
+若要求明確包含 `執行模式：DIRECTORY_SCAFFOLD_ONLY`，則只路由至目錄與範本建立能力；不得先要求正式 `CaseManifest`、連續升級跳點、正式案件建立入口或完整 SOP。此模式仍必須通過外部案件根目錄白名單、權限與既有資料檢查，且不得建立正式案件清單或歷程。
 
 使用下列階段名稱：盤點、規劃、演練、正式執行、驗證、交接。失敗、非預期結果或中斷時先進入異常處理，不得直接跳到重試。
 
@@ -31,6 +39,8 @@ description: 以證據與階段關卡總協調 Aras Innovator 升級，判斷案
 - 下一個安全動作。
 
 ## 功能路由
+
+Core Tree 與 Package／DB 是獨立工作流。收到 Core Tree 輸入驗證、preflight、比較或交付要求時，只檢查 Core Tree 輸入證據與其正式工作流；不得以尚未建立的 Package／DB 路徑、Patch 或 Support 阻擋。若根層尚無 `aras-upgrade-case.json`，先路由正式 `--create-core-tree-case` 建立 Core Tree 工作流；不得改走需要 `CurrentRoute` 的 Package／DB 案件流程。若案件清單已有 `coreTreeComparison` 且 `routes` 為空，這是有效的 Core Tree-only 案件：`currentRouteVersion` 應為 `0`，且首次比較前缺少 `.orchestrator\history.jsonl` 只表示尚無執行嘗試，不得阻擋 preflight。收到 Package／DB 工作要求時，仍須嚴格檢查連續跳點與 Support 證據，且不得以 Core Tree 結果替代。
 
 | 使用者意圖 | 功能 Skill |
 |---|---|

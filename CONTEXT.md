@@ -81,8 +81,20 @@ _Avoid_: 客戶 Package 基準、第一版比較輸入
 _Avoid_: 原始 Package 備份、任意客戶 Package
 
 **升級路徑**:
-由操作人員依已驗證的 Aras 原廠文件選定、按順序連接來源版本至目標版本的跳點執行集合；AI 不得自行改變跳點。
+由操作人員依已驗證的 Aras 原廠文件選定、按順序連接來源版本至目標版本的 Package／DB 跳點執行集合；Core Tree 版本差異比較不屬於升級路徑，AI 不得自行改變跳點。
 _Avoid_: AI 推定路徑、執行後直接改寫路徑
+
+**Core Tree 版本差異比較**:
+以客戶目前版本 Core Tree、同版本 OOTB Core Tree 及最終版本 OOTB Core Tree 進行的一次獨立檔案比較與 A／B／C 分類；不依 Package／DB 跳點逐階段執行，不修改 DB、Package 或最終版本 Core Tree。
+_Avoid_: Core Tree 逐跳比較、以 Core Tree 比較取代 Package Import
+
+**Package Import 跳點**:
+依升級路徑中的來源／目標 DB 版本，使用對應 Aras 官方 Patch、Support 與 Package Import 進行的單一階段；每一跳須保存輸入、執行、驗證及 DB 備份證據。
+_Avoid_: 將 Core Tree 比較當成 Package Import、跨跳點共用未驗證 Package
+
+**Aras 官方 Patch 輸入**:
+由 Aras Innovator 提供、針對特定來源／目標版本的不可變 Patch、Package 或 Support 輸入；須記錄來源位置、版本、Checksum 與適用跳點，不由 AI 產生或修改。
+_Avoid_: AI 自行產生 Patch、只依檔名判定 Patch 版本
 
 **跳點 Package 子任務**:
 「Package 比較／產生升級 Package」父任務下，為特定版本區間準備正式適配 Package 的子任務；不同區間可分開或平行準備。
@@ -149,7 +161,7 @@ _Avoid_: 猜測候選、建立正式分類 D
 _Avoid_: 全樹同名搜尋、跨目錄猜測配對
 
 **Core Tree 執行產出**:
-單次 Core Tree 比較執行嘗試所建立的 A／B／C 目錄與相關清單；重新執行時建立新產出，不得覆寫前次結果。
+單次 Core Tree 版本差異比較執行嘗試所建立的 A／B／C 目錄與相關清單；輸入固定為客戶目前版本、同版 OOTB 與最終版本 OOTB，重新執行時建立新產出，不得覆寫前次結果。
 _Avoid_: 覆寫重跑、跨執行共用輸出目錄
 
 **Core Tree 完成標記**:

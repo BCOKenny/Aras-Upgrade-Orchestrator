@@ -13,7 +13,7 @@ description: Use when Codex 需要協調 Aras Core Tree 的完整比較交付、
 
 1. 讀取根層 `AGENTS.md`、`CONTEXT.md`、相關 ADR、`.scratch/aras-upgrade-orchestrator/spec.md` 第 4、5、6、14、17、18 節。
 2. 完整讀取 `docs/standards/AML_Structure_and_Traversal_Standard.md`、`docs/design/skill-map.md` 與 `references/core-capabilities.md`。Core Tree XML 不使用 Package AML 語意相等。
-3. 使用 `aras-manage-upgrade-case` 核對案件、來源／目標版本、新執行嘗試、輸出目錄、歷程及工作目錄鎖。
+3. 使用 `aras-manage-upgrade-case` 核對 Core Tree 工作流的案件、來源／目標版本、新執行嘗試、輸出目錄、歷程及工作目錄鎖；不得要求 Package／DB 升級路徑、Patch 或 Support。
 4. 未取得實際客戶目錄授權時，只能使用隔離測試／演練資料與替身。使用者明確授權 `K:\70.ArasUpgradeCases\<case-id>` 時，僅可將該案件內的 `core-tree\inputs` 視為唯讀隔離測試輸入；只有正式、受測的 command/action 可在同一案件的 `core-tree\attempts` 建立新輸出，並由正式案件能力追加 execution history。
 
 ## 路由

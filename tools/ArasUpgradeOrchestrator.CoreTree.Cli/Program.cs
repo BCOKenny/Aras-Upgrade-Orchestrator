@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.CoreTrees;
 using ArasUpgradeOrchestrator.Core.Execution;
 using ArasUpgradeOrchestrator.Core.Safety;
@@ -13,6 +14,7 @@ if (args is ["--help"] or ["-h"] or [])
 {
     Console.WriteLine("Core Tree offline test CLI");
     Console.WriteLine("Build once: dotnet build ArasUpgradeOrchestrator.sln --configuration Release --no-restore");
+    Console.WriteLine("Create a Core Tree workflow case: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --create-core-tree-case <request.json>");
     Console.WriteLine("Run the compiled CLI: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --preflight <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --request <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --approve-reviews <request.json>");
@@ -20,6 +22,35 @@ if (args is ["--help"] or ["-h"] or [])
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --build-delivery <request.json>");
     Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist for --request.");
     return 0;
+}
+
+if (args is ["--create-core-tree-case", var creationRequestPath] && !string.IsNullOrWhiteSpace(creationRequestPath))
+{
+    try
+    {
+        var creationInput = JsonSerializer.Deserialize<CliCoreTreeCaseCreationRequest>(await File.ReadAllTextAsync(creationRequestPath), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        var definition = ValidateCoreTreeCaseCreationInput(creationInput);
+        var caseStore = new CaseStore(creationInput.CaseRoot);
+        var manifest = CaseManifest.CreateCoreTreeWorkflow(
+            Guid.NewGuid(),
+            creationInput.CustomerCode,
+            creationInput.SourceVersion,
+            creationInput.TargetVersion,
+            definition,
+            DateTimeOffset.UtcNow);
+        await caseStore.CreateAsync(manifest);
+        Console.WriteLine(JsonSerializer.Serialize(new CliCoreTreeCaseCreationResult(
+            manifest.CaseId,
+            "CoreTree",
+            caseStore.ManifestPath,
+            caseStore.ToolDataPath), jsonOptions));
+        return 0;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, jsonOptions);
+    }
 }
 
 if (args is ["--approve-reviews", var approvalRequestPath] && !string.IsNullOrWhiteSpace(approvalRequestPath))
@@ -95,7 +126,7 @@ if (args is ["--build-delivery", var deliveryRequestPath] && !string.IsNullOrWhi
 }
 
 if (args is not ["--preflight" or "--request", var requestPath] || string.IsNullOrWhiteSpace(requestPath))
-    return await WriteFailureAsync("CliArgumentError", "Expected --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, --finalize-comparison <request.json>, or --build-delivery <request.json>. Use --help for usage.", 2, jsonOptions);
+    return await WriteFailureAsync("CliArgumentError", "Expected --create-core-tree-case <request.json>, --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, --finalize-comparison <request.json>, or --build-delivery <request.json>. Use --help for usage.", 2, jsonOptions);
 
 try
 {
@@ -104,9 +135,11 @@ try
         ?? throw new InvalidDataException("Request JSON is empty.");
     ValidateInput(input, args[0] == "--request");
 
-    var customer = new CoreTreeInputEvidence(input.CustomerRoot, input.SourceVersion, input.CustomerEvidence);
-    var sourceOotb = new CoreTreeInputEvidence(input.SourceOotbRoot, input.SourceVersion, input.SourceOotbEvidence);
-    var targetOotb = new CoreTreeInputEvidence(input.TargetOotbRoot, input.TargetVersion, input.TargetOotbEvidence);
+    var caseManifest = await new CaseStore(input.CaseRoot).LoadAsync();
+    var resolvedInputs = ResolveCoreTreeInputs(input, caseManifest);
+    var customer = new CoreTreeInputEvidence(resolvedInputs.CustomerRoot, input.SourceVersion, resolvedInputs.CustomerEvidence);
+    var sourceOotb = new CoreTreeInputEvidence(resolvedInputs.SourceOotbRoot, input.SourceVersion, resolvedInputs.SourceOotbEvidence);
+    var targetOotb = new CoreTreeInputEvidence(resolvedInputs.TargetOotbRoot, input.TargetVersion, resolvedInputs.TargetOotbEvidence);
     var serverTextRules = CoreTreeServerTextRuleSet.Create(input.ServerRuleVersion, input.ServerRulePaths);
 
     if (args[0] == "--preflight")
@@ -171,12 +204,15 @@ static void ValidateInput(CliRequest input, bool requiresRequestFields)
     Require(input.CaseRoot, nameof(input.CaseRoot));
     Require(input.SourceVersion, nameof(input.SourceVersion));
     Require(input.TargetVersion, nameof(input.TargetVersion));
-    Require(input.CustomerRoot, nameof(input.CustomerRoot));
-    Require(input.CustomerEvidence, nameof(input.CustomerEvidence));
-    Require(input.SourceOotbRoot, nameof(input.SourceOotbRoot));
-    Require(input.SourceOotbEvidence, nameof(input.SourceOotbEvidence));
-    Require(input.TargetOotbRoot, nameof(input.TargetOotbRoot));
-    Require(input.TargetOotbEvidence, nameof(input.TargetOotbEvidence));
+    if (!input.UseCaseCoreTreeInputs)
+    {
+        Require(input.CustomerRoot, nameof(input.CustomerRoot));
+        Require(input.CustomerEvidence, nameof(input.CustomerEvidence));
+        Require(input.SourceOotbRoot, nameof(input.SourceOotbRoot));
+        Require(input.SourceOotbEvidence, nameof(input.SourceOotbEvidence));
+        Require(input.TargetOotbRoot, nameof(input.TargetOotbRoot));
+        Require(input.TargetOotbEvidence, nameof(input.TargetOotbEvidence));
+    }
     Require(input.OutputRoot, nameof(input.OutputRoot));
     Require(input.ServerRuleVersion, nameof(input.ServerRuleVersion));
     if (input.ServerRulePaths is null || input.ServerRulePaths.Count == 0)
@@ -191,6 +227,107 @@ static void Require(string? value, string fieldName)
 {
     if (string.IsNullOrWhiteSpace(value))
         throw new InvalidDataException($"{fieldName} is required.");
+}
+
+static CoreTreeComparisonDefinition ValidateCoreTreeCaseCreationInput(CliCoreTreeCaseCreationRequest input)
+{
+    Require(input.CaseRoot, nameof(input.CaseRoot));
+    Require(input.CustomerCode, nameof(input.CustomerCode));
+    Require(input.SourceVersion, nameof(input.SourceVersion));
+    Require(input.TargetVersion, nameof(input.TargetVersion));
+    if (string.Equals(input.SourceVersion, input.TargetVersion, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("SourceVersion and TargetVersion must differ.");
+
+    var definition = new CoreTreeComparisonDefinition(
+        input.CustomerInputId,
+        input.SourceOotbInputId,
+        input.TargetOotbInputId,
+        input.CustomerTreePath,
+        input.CustomerEvidencePath,
+        input.SourceOotbTreePath,
+        input.SourceOotbEvidencePath,
+        input.TargetOotbTreePath,
+        input.TargetOotbEvidencePath,
+        input.ComparisonName);
+    definition.Validate();
+
+    var caseRoot = Path.GetFullPath(input.CaseRoot);
+    if (!Directory.Exists(caseRoot))
+        throw new InvalidDataException("CaseRoot must already exist before creating a formal Core Tree workflow case.");
+
+    var inputRoots = new[]
+    {
+        ResolveCaseRelativePath(caseRoot, definition.CustomerTreePath),
+        ResolveCaseRelativePath(caseRoot, definition.SourceOotbTreePath),
+        ResolveCaseRelativePath(caseRoot, definition.TargetOotbTreePath)
+    };
+    var evidenceRoots = new[]
+    {
+        ResolveCaseRelativePath(caseRoot, definition.CustomerEvidencePath),
+        ResolveCaseRelativePath(caseRoot, definition.SourceOotbEvidencePath),
+        ResolveCaseRelativePath(caseRoot, definition.TargetOotbEvidencePath)
+    };
+    for (var index = 0; index < inputRoots.Length; index++)
+        ValidateCoreTreeCaseInput(inputRoots[index], evidenceRoots[index]);
+    for (var left = 0; left < inputRoots.Length; left++)
+        for (var right = left + 1; right < inputRoots.Length; right++)
+            if (PathsOverlap(inputRoots[left], inputRoots[right]))
+                throw new InvalidDataException("Core Tree input roots must not overlap.");
+
+    return definition;
+}
+
+static string ResolveCaseRelativePath(string caseRoot, string relativePath)
+{
+    var resolved = Path.GetFullPath(Path.Combine(caseRoot, relativePath));
+    if (!resolved.StartsWith(Path.TrimEndingDirectorySeparator(caseRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("Core Tree paths must remain under CaseRoot.");
+    return resolved;
+}
+
+static void ValidateCoreTreeCaseInput(string treePath, string evidencePath)
+{
+    if (!Directory.Exists(treePath))
+        throw new InvalidDataException($"Core Tree input directory does not exist: {treePath}");
+    foreach (var side in new[] { "Client", "Server" })
+        if (!Directory.Exists(Path.Combine(treePath, "Innovator", side)))
+            throw new InvalidDataException($"Core Tree input is missing Innovator\\{side}: {treePath}");
+    if (!Directory.Exists(evidencePath))
+        throw new InvalidDataException($"Core Tree evidence directory does not exist: {evidencePath}");
+
+    var names = Directory.EnumerateFiles(evidencePath, "*", SearchOption.TopDirectoryOnly)
+        .Select(Path.GetFileName)
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    foreach (var required in new[] { "version-primary.md", "integrity.md", "integrity.sha256", "source-provenance.md" })
+        if (!names.Contains(required))
+            throw new InvalidDataException($"Core Tree evidence is missing {required}: {evidencePath}");
+}
+
+static bool PathsOverlap(string left, string right) =>
+    IsSameOrDescendant(left, right) || IsSameOrDescendant(right, left);
+
+static bool IsSameOrDescendant(string candidate, string root) =>
+    string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase) ||
+    candidate.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+static ResolvedCoreTreeInputs ResolveCoreTreeInputs(CliRequest input, CaseManifest manifest)
+{
+    if (!input.UseCaseCoreTreeInputs)
+        return new(
+            input.CustomerRoot!, input.CustomerEvidence!, input.SourceOotbRoot!, input.SourceOotbEvidence!,
+            input.TargetOotbRoot!, input.TargetOotbEvidence!);
+
+    var definition = manifest.CoreTreeComparison
+        ?? throw new InvalidDataException("案件清單缺少 coreTreeComparison，無法依案件設定解析 Core Tree 輸入。 ");
+    definition.Validate();
+    return new(
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.CustomerTreePath),
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.CustomerEvidencePath),
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.SourceOotbTreePath),
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.SourceOotbEvidencePath),
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.TargetOotbTreePath),
+        Path.Combine(Path.GetFullPath(input.CaseRoot), definition.TargetOotbEvidencePath));
 }
 
 static void ValidateApprovalInput(CliApprovalRequest input)
@@ -235,24 +372,47 @@ static async Task<int> WriteFailureAsync(string code, string message, int exitCo
 
 public sealed record CliFailure(string Status, string Code, string Message);
 
+public sealed record CliCoreTreeCaseCreationRequest(
+    string CaseRoot,
+    string CustomerCode,
+    string SourceVersion,
+    string TargetVersion,
+    string CustomerInputId,
+    string SourceOotbInputId,
+    string TargetOotbInputId,
+    string CustomerTreePath,
+    string CustomerEvidencePath,
+    string SourceOotbTreePath,
+    string SourceOotbEvidencePath,
+    string TargetOotbTreePath,
+    string TargetOotbEvidencePath,
+    string ComparisonName);
+
+public sealed record CliCoreTreeCaseCreationResult(
+    Guid CaseId,
+    string Workflow,
+    string ManifestPath,
+    string ToolDataPath);
+
 public sealed record CliRequest(
     string CaseRoot,
     string Actor,
     string SourceVersion,
     string TargetVersion,
-    string CustomerRoot,
-    string CustomerEvidence,
-    string SourceOotbRoot,
-    string SourceOotbEvidence,
-    string TargetOotbRoot,
-    string TargetOotbEvidence,
+    string? CustomerRoot,
+    string? CustomerEvidence,
+    string? SourceOotbRoot,
+    string? SourceOotbEvidence,
+    string? TargetOotbRoot,
+    string? TargetOotbEvidence,
     string OutputRoot,
     string ServerRuleVersion,
     IReadOnlyList<string> ServerRulePaths,
     IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
     IReadOnlyDictionary<string, bool>? Prerequisites = null,
     CliRetryEvidence? RetryEvidence = null,
-    CliConfirmation? Confirmation = null);
+    CliConfirmation? Confirmation = null,
+    bool UseCaseCoreTreeInputs = false);
 
 public sealed record CliSafetyWhitelistEntry(
     string ActionId,
@@ -292,3 +452,11 @@ public sealed record CliDeliveryRequest(
     IReadOnlyList<CliSafetyWhitelistEntry> SafetyWhitelist,
     IReadOnlyDictionary<string, bool>? Prerequisites = null,
     CliConfirmation? Confirmation = null);
+
+public sealed record ResolvedCoreTreeInputs(
+    string CustomerRoot,
+    string CustomerEvidence,
+    string SourceOotbRoot,
+    string SourceOotbEvidence,
+    string TargetOotbRoot,
+    string TargetOotbEvidence);
