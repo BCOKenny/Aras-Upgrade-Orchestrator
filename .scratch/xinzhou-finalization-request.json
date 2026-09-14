@@ -1,0 +1,18 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "actor": "BCO\\kenny",
+  "comparisonOutputRoot": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\attempts\\attempt-20260903-001",
+  "approvalManifestPath": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\review-approvals\\approval-20260903-001\\manual-review-approval.json",
+  "completionOutputRoot": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\completions\\completion-20260903-001",
+  "prerequisites": {
+    "responsible-owner.confirmed-finalization": true
+  },
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.finalize-comparison",
+      "actionVersion": "1",
+      "allowedTargetRoots": ["K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\completions"],
+      "requiredPrerequisites": ["case.loaded", "comparison.incomplete", "comparison.errors.zero", "reviews.approved", "reviews.checksums.valid", "history.consistent", "completion.output.new"]
+    }
+  ]
+}

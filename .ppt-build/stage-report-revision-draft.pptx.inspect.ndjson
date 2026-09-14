@@ -1,0 +1,353 @@
+{"kind":"deck","id":"pr/m694dm","name":"Deck"}
+{"kind":"layout","layoutId":"be7af48e-f0c6-4198-a01f-25b0ef29e606","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"8df159c1-e6d4-4322-aaee-3782dfb2dc14","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/6ty5a5","slide":1,"title":"階段性開發成果","textShapes":5}
+{"kind":"shape","id":"sh/432hsjy1","slide":1,"bbox":[70,94,10,282]}
+{"kind":"textbox","id":"sh/32t0zyxg","slide":1,"text":"階段性開發成果","textPreview":"階段性開發成果","textChars":7,"textLines":1,"bbox":[110,124,900,65]}
+{"kind":"textbox","id":"sh/i1kzqtgb","slide":1,"text":"客戶環境升級與 Core Tree 整合交付流程","textPreview":"客戶環境升級與 Core Tree 整合交付流程","textChars":24,"textLines":1,"bbox":[112,210,960,45]}
+{"kind":"textbox","id":"sh/dsbi58fy","slide":1,"text":"芯洲  |  11.0 SP9 → R38","textPreview":"芯洲  |  11.0 SP9 → R38","textChars":21,"textLines":1,"bbox":[112,315,640,34]}
+{"kind":"textbox","id":"sh/s72hw3ed","slide":1,"text":"報告人：BCO\\Kenny、Benjamin","textPreview":"報告人：BCO\\Kenny、Benjamin","textChars":22,"textLines":1,"bbox":[112,550,640,30]}
+{"kind":"textbox","id":"sh/r6t03yxs","slide":1,"text":"2026-09","textPreview":"2026-09","textChars":7,"textLines":1,"bbox":[112,606,400,24]}
+{"kind":"notes","id":"nt/6ty5a5","slide":1,"text":"本簡報依需求訪談內容、Core Tree 程序文件與芯洲案件正式產出整理。"}
+{"kind":"slide","id":"sl/okqbdy","slide":2,"title":"整體升級架構與目前開發範圍","textShapes":17}
+{"kind":"textbox","id":"sh/c7yt03qd","slide":2,"text":"整體升級架構與目前開發範圍","textPreview":"整體升級架構與目前開發範圍","textChars":13,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/b6pcrips","slide":2,"text":"左側為後續 Package／DB 升級工作流；右側為本階段已完成的 Core Tree 比較與交付","textPreview":"左側為後續 Package／DB 升級工作流；右側為本階段已完成的 Core Tree 比較與交付","textChars":49,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/a5gbyd87","slide":2,"bbox":[58,135,680,475]}
+{"kind":"textbox","id":"sh/p4nup87m","slide":2,"text":"Package／DB 升級工作流","textPreview":"Package／DB 升級工作流","textChars":16,"textLines":1,"bbox":[88,158,330,30]}
+{"kind":"shape","id":"sh/ojetw3q1","slide":2,"bbox":[115,215,220,58]}
+{"kind":"textbox","id":"sh/ni5snypw","slide":2,"text":"重建客戶環境","textPreview":"重建客戶環境","textChars":6,"textLines":1,"bbox":[127,230,196,30]}
+{"kind":"shape","id":"sh/2hwbut8b","slide":2,"bbox":[115,305,220,58]}
+{"kind":"textbox","id":"sh/1gnalo7q","slide":2,"text":"產生客戶 Package","textPreview":"產生客戶 Package","textChars":12,"textLines":1,"bbox":[127,320,196,30]}
+{"kind":"shape","id":"sh/0fetsjq5","slide":2,"bbox":[115,395,220,58]}
+{"kind":"textbox","id":"sh/6tsj6dcz","slide":2,"text":"比較／產生升級 Package","textPreview":"比較／產生升級 Package","textChars":15,"textLines":1,"bbox":[127,410,196,30]}
+{"kind":"shape","id":"sh/7u10fidk","slide":2,"bbox":[390,215,220,58]}
+{"kind":"textbox","id":"sh/sva18nu5","slide":2,"text":"11SP5 → 11SP15","textPreview":"11SP5 → 11SP15","textChars":14,"textLines":1,"bbox":[402,230,196,30]}
+{"kind":"shape","id":"sh/twjihsvq","slide":2,"bbox":[390,305,220,58]}
+{"kind":"textbox","id":"sh/y58z2dw3","slide":2,"text":"11SP15 → 12SP18","textPreview":"11SP15 → 12SP18","textChars":15,"textLines":1,"bbox":[402,320,196,30]}
+{"kind":"shape","id":"sh/j610bido","slide":2,"bbox":[390,395,220,58]}
+{"kind":"textbox","id":"sh/k7ah4nut","slide":2,"text":"12SP18 → R38","textPreview":"12SP18 → R38","textChars":12,"textLines":1,"bbox":[402,410,196,30]}
+{"kind":"shape","id":"sh/lsjid8ve","slide":2,"bbox":[285,520,175,52]}
+{"kind":"textbox","id":"sh/a18zytwr","slide":2,"text":"R38 DB","textPreview":"R38 DB","textChars":6,"textLines":1,"bbox":[300,532,145,25]}
+{"kind":"textbox","id":"sh/b2h07ydc","slide":2,"text":"每一跳須先完成 Package 產生、驗證、核准與執行確認","textPreview":"每一跳須先完成 Package 產生、驗證、核准與執行確認","textChars":29,"textLines":1,"bbox":[85,462,590,35]}
+{"kind":"shape","id":"sh/z6dgfut4","slide":2,"bbox":[772,135,450,475]}
+{"kind":"textbox","id":"sh/e54f6pcj","slide":2,"text":"本階段已完成","textPreview":"本階段已完成","textChars":6,"textLines":1,"bbox":[802,158,240,30]}
+{"kind":"shape","id":"sh/18fyh4ba","slide":2,"bbox":[836,220,320,65]}
+{"kind":"textbox","id":"sh/076x8zup","slide":2,"text":"客戶 Core Tree + R38 OOTB","textPreview":"客戶 Core Tree + R38 OOTB","textChars":23,"textLines":1,"bbox":[854,238,284,28]}
+{"kind":"shape","id":"sh/naxgjetg","slide":2,"bbox":[836,320,320,72]}
+{"kind":"textbox","id":"sh/m9ofa9sv","slide":2,"text":"比較及分類 Core Tree\nA／B／C + Manual Review","textPreview":"比較及分類 Core Tree | A／B／C + Manual Review","textChars":37,"textLines":2,"bbox":[850,334,292,46]}
+{"kind":"shape","id":"sh/9cfylob6","slide":2,"bbox":[836,432,320,66]}
+{"kind":"textbox","id":"sh/ob6xcjal","slide":2,"text":"Completion receipt + A／B／C delivery","textPreview":"Completion receipt + A／B／C delivery","textChars":35,"textLines":1,"bbox":[850,450,292,28]}
+{"kind":"textbox","id":"sh/3etw7atw","slide":2,"text":"Core Tree 與 Package／DB 分流準備，最終交付階段整合","textPreview":"Core Tree 與 Package／DB 分流準備，最終交付階段整合","textChars":36,"textLines":1,"bbox":[804,536,360,38]}
+{"kind":"textbox","id":"sh/2dkfy5cb","slide":2,"text":"階段性開發成果  |  2/14","textPreview":"階段性開發成果  |  2/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/okqbdy","slide":2,"text":"架構依使用者提供之流程圖與專案 ADR 0004：Core Tree 與 Package／DB 跳點分離。"}
+{"kind":"slide","id":"sl/8891jw","slide":3,"title":"需求訪談形成的規格範圍","textShapes":19}
+{"kind":"textbox","id":"sh/5wryp8ri","slide":3,"text":"需求訪談形成的規格範圍","textPreview":"需求訪談形成的規格範圍","textChars":11,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/it0fed8r","slide":3,"text":"標準化從來源版本到 R38 的升級、比較與最終交付","textPreview":"標準化從來源版本到 R38 的升級、比較與最終交付","textChars":25,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/ju9gni9c","slide":3,"bbox":[64,140,540,430]}
+{"kind":"textbox","id":"sh/wryxc3ql","slide":3,"text":"規格重點","textPreview":"規格重點","textChars":4,"textLines":1,"bbox":[94,168,260,32]}
+{"kind":"textbox","id":"sh/xs7yl8r6","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[94,230,18,28]}
+{"kind":"textbox","id":"sh/apgfat8v","slide":3,"text":"來源版本、目標版本與必要跳點可追溯","textPreview":"來源版本、目標版本與必要跳點可追溯","textChars":17,"textLines":1,"bbox":[120,230,444,30]}
+{"kind":"textbox","id":"sh/vqpgjy9g","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[94,296,18,28]}
+{"kind":"textbox","id":"sh/o3yx8jqp","slide":3,"text":"每一跳先完成 Package 產生、驗證與核准","textPreview":"每一跳先完成 Package 產生、驗證與核准","textChars":23,"textLines":1,"bbox":[120,296,444,30]}
+{"kind":"textbox","id":"sh/947yhora","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[94,362,18,28]}
+{"kind":"textbox","id":"sh/p0jmtg32","slide":3,"text":"跳點依版本順序執行，不可跨越或倒置","textPreview":"跳點依版本順序執行，不可跨越或倒置","textChars":17,"textLines":1,"bbox":[120,362,444,30]}
+{"kind":"textbox","id":"sh/oza5kb2h","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[94,428,18,28]}
+{"kind":"textbox","id":"sh/3y14rqlw","slide":3,"text":"最終交付同時具備已驗證 R38 DB 與 R38 Core Tree","textPreview":"最終交付同時具備已驗證 R38 DB 與 R38 Core Tree","textChars":34,"textLines":1,"bbox":[120,428,444,30]}
+{"kind":"shape","id":"sh/2dsnilkb","slide":3,"bbox":[650,140,565,430]}
+{"kind":"textbox","id":"sh/1czmpg36","slide":3,"text":"關卡與產出","textPreview":"關卡與產出","textChars":5,"textLines":1,"bbox":[680,168,260,32]}
+{"kind":"textbox","id":"sh/gbq5gbml","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,230,18,28]}
+{"kind":"textbox","id":"sh/fah4n6l0","slide":3,"text":"跳點執行紀錄、登入驗證與 DB 備份證據","textPreview":"跳點執行紀錄、登入驗證與 DB 備份證據","textChars":20,"textLines":1,"bbox":[706,230,464,30]}
+{"kind":"textbox","id":"sh/u983e14f","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,308,18,28]}
+{"kind":"textbox","id":"sh/t8zmlw3u","slide":3,"text":"Core Tree 差異檢查、人工確認與 A／B／C 交付","textPreview":"Core Tree 差異檢查、人工確認與 A／B／C 交付","textChars":29,"textLines":1,"bbox":[706,308,464,30]}
+{"kind":"textbox","id":"sh/s7qlcrm9","slide":3,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,386,18,28]}
+{"kind":"textbox","id":"sh/kru58bu5","slide":3,"text":"最終交付摘要、checksum 與例外處理紀錄","textPreview":"最終交付摘要、checksum 與例外處理紀錄","textChars":23,"textLines":1,"bbox":[706,386,464,30]}
+{"kind":"textbox","id":"sh/ls3m1wbq","slide":3,"text":"階段性開發成果  |  3/14","textPreview":"階段性開發成果  |  3/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/8891jw","slide":3,"text":"來源：使用者提供的需求訪談大綱。"}
+{"kind":"slide","id":"sl/iqsnhe","slide":4,"title":"本階段完成的 Core Tree 比較程序","textShapes":21}
+{"kind":"textbox","id":"sh/edwfmt4v","slide":4,"text":"本階段完成的 Core Tree 比較程序","textPreview":"本階段完成的 Core Tree 比較程序","textChars":21,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/1g7yx83m","slide":4,"text":"從目錄骨架、輸入證據到正式 A／B／C delivery，保留完整可追溯證據","textPreview":"從目錄骨架、輸入證據到正式 A／B／C delivery，保留完整可追溯證據","textChars":38,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/0fyxo3m1","slide":4,"bbox":[56,235,128,102]}
+{"kind":"textbox","id":"sh/ra5grelk","slide":4,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[68,247,24,22]}
+{"kind":"textbox","id":"sh/q9wfit4z","slide":4,"text":"目錄骨架","textPreview":"目錄骨架","textChars":4,"textLines":1,"bbox":[66,280,108,45]}
+{"kind":"shape","id":"sh/dcnyto3a","slide":4,"bbox":[184,282,20,6]}
+{"kind":"shape","id":"sh/sbexkjmp","slide":4,"bbox":[204,235,128,102]}
+{"kind":"textbox","id":"sh/b6pg3ilo","slide":4,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[216,247,24,22]}
+{"kind":"textbox","id":"sh/a5gzud43","slide":4,"text":"三份 Tree\n輸入","textPreview":"三份 Tree | 輸入","textChars":10,"textLines":2,"bbox":[214,280,108,45]}
+{"kind":"shape","id":"sh/w7udg3ip","slide":4,"bbox":[332,282,20,6]}
+{"kind":"shape","id":"sh/x83u9ozu","slide":4,"bbox":[352,235,128,102]}
+{"kind":"textbox","id":"sh/a5svet0j","slide":4,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[364,247,24,22]}
+{"kind":"textbox","id":"sh/b61c7yh4","slide":4,"text":"Evidence\nPreview/Write","textPreview":"Evidence | Preview/Write","textChars":22,"textLines":2,"bbox":[362,280,108,45]}
+{"kind":"shape","id":"sh/o3atcjid","slide":4,"bbox":[480,282,20,6]}
+{"kind":"shape","id":"sh/94ju5ozy","slide":4,"bbox":[500,235,128,102]}
+{"kind":"textbox","id":"sh/m1sba907","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[512,247,24,22]}
+{"kind":"textbox","id":"sh/n21c3ehs","slide":4,"text":"正式案件\n建立","textPreview":"正式案件 | 建立","textChars":7,"textLines":2,"bbox":[510,280,108,45]}
+{"kind":"shape","id":"sh/0fat8jih","slide":4,"bbox":[628,282,20,6]}
+{"kind":"shape","id":"sh/1gju14z2","slide":4,"bbox":[648,235,128,102]}
+{"kind":"textbox","id":"sh/1wba50rq","slide":4,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[660,247,24,22]}
+{"kind":"textbox","id":"sh/gv29cva5","slide":4,"text":"Preflight\n與比較","textPreview":"Preflight | 與比較","textChars":13,"textLines":2,"bbox":[658,280,108,45]}
+{"kind":"shape","id":"sh/fu9s3q9k","slide":4,"bbox":[776,282,20,6]}
+{"kind":"shape","id":"sh/e90ra5sz","slide":4,"bbox":[796,235,128,102]}
+{"kind":"textbox","id":"sh/t8ra10re","slide":4,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[808,247,24,22]}
+{"kind":"textbox","id":"sh/s7i98va9","slide":4,"text":"Manual Review","textPreview":"Manual Review","textChars":13,"textLines":1,"bbox":[806,280,108,45]}
+{"kind":"shape","id":"sh/r69szqto","slide":4,"bbox":[924,282,20,6]}
+{"kind":"shape","id":"sh/650r6ls3","slide":4,"bbox":[944,235,128,102]}
+{"kind":"textbox","id":"sh/d4vadkry","slide":4,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[956,247,24,22]}
+{"kind":"textbox","id":"sh/c3mtkfad","slide":4,"text":"Approval\nFinalization","textPreview":"Approval | Finalization","textChars":21,"textLines":2,"bbox":[954,280,108,45]}
+{"kind":"shape","id":"sh/axcfix4j","slide":4,"bbox":[1072,282,20,6]}
+{"kind":"shape","id":"sh/vylgril4","slide":4,"bbox":[1092,235,128,102]}
+{"kind":"textbox","id":"sh/wzehknmp","slide":4,"text":"8","textPreview":"8","textChars":1,"textLines":1,"bbox":[1104,247,24,22]}
+{"kind":"textbox","id":"sh/x0nyts3a","slide":4,"text":"A／B／C\nDelivery","textPreview":"A／B／C | Delivery","textChars":14,"textLines":2,"bbox":[1102,280,108,45]}
+{"kind":"shape","id":"sh/mtcfed4n","slide":4,"bbox":[120,410,1040,105]}
+{"kind":"textbox","id":"sh/nulgni58","slide":4,"text":"關鍵管制","textPreview":"關鍵管制","textChars":4,"textLines":1,"bbox":[155,437,145,30]}
+{"kind":"textbox","id":"sh/ovuxgnmd","slide":4,"text":"輸入 Tree 與 Evidence 唯讀；每次 comparison、completion、delivery 使用新目錄；history 只追加。","textPreview":"輸入 Tree 與 Evidence 唯讀；每次 comparison、completion、delivery 使用新目錄；history 只追加。","textChars":74,"textLines":1,"bbox":[315,437,800,42]}
+{"kind":"textbox","id":"sh/9w3yps3y","slide":4,"text":"階段性開發成果  |  4/14","textPreview":"階段性開發成果  |  4/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/iqsnhe","slide":4,"text":"來源：docs/operations/core-tree/procedure-map.md。"}
+{"kind":"slide","id":"sl/f2s5ia","slide":5,"title":"目前開發成果與正式產出","textShapes":20}
+{"kind":"textbox","id":"sh/ovmh0f2x","slide":5,"text":"目前開發成果與正式產出","textPreview":"目前開發成果與正式產出","textChars":11,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/nudg7alc","slide":5,"text":"芯洲案件完成 Core Tree comparison、review approval、finalization 與 delivery","textPreview":"芯洲案件完成 Core Tree comparison、review approval、finalization 與 delivery","textChars":67,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/mt4fypkr","slide":5,"bbox":[62,145,320,390]}
+{"kind":"textbox","id":"sh/1sby5k36","slide":5,"text":"已完成關卡","textPreview":"已完成關卡","textChars":5,"textLines":1,"bbox":[92,176,220,32]}
+{"kind":"textbox","id":"sh/0r2xwf2l","slide":5,"text":"Preflight","textPreview":"Preflight","textChars":9,"textLines":1,"bbox":[96,235,235,29]}
+{"kind":"textbox","id":"sh/zqtg3al0","slide":5,"text":"Comparison","textPreview":"Comparison","textChars":10,"textLines":1,"bbox":[96,278,235,29]}
+{"kind":"textbox","id":"sh/e5kfu5kv","slide":5,"text":"Manual Review","textPreview":"Manual Review","textChars":13,"textLines":1,"bbox":[96,321,235,29]}
+{"kind":"textbox","id":"sh/d4by103a","slide":5,"text":"Review approval","textPreview":"Review approval","textChars":15,"textLines":1,"bbox":[96,364,235,29]}
+{"kind":"textbox","id":"sh/c32xsvmp","slide":5,"text":"Finalization","textPreview":"Finalization","textChars":12,"textLines":1,"bbox":[96,407,235,29]}
+{"kind":"textbox","id":"sh/ipoz69kv","slide":5,"text":"A／B／C delivery","textPreview":"A／B／C delivery","textChars":14,"textLines":1,"bbox":[96,450,235,29]}
+{"kind":"shape","id":"sh/jqx0zu1g","slide":5,"bbox":[430,145,780,390]}
+{"kind":"textbox","id":"sh/4r6h8z2l","slide":5,"text":"比較結果","textPreview":"比較結果","textChars":4,"textLines":1,"bbox":[462,176,250,32]}
+{"kind":"textbox","id":"sh/5sfi14j6","slide":5,"text":"377","textPreview":"377","textChars":3,"textLines":1,"bbox":[462,245,95,42]}
+{"kind":"textbox","id":"sh/ul4z2pkj","slide":5,"text":"A 類","textPreview":"A 類","textChars":3,"textLines":1,"bbox":[572,251,170,28]}
+{"kind":"textbox","id":"sh/vmxgvu14","slide":5,"text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[797,245,95,42]}
+{"kind":"textbox","id":"sh/wn6h4z2p","slide":5,"text":"B 類","textPreview":"B 類","textChars":3,"textLines":1,"bbox":[907,251,170,28]}
+{"kind":"textbox","id":"sh/hofyx4ja","slide":5,"text":"18","textPreview":"18","textChars":2,"textLines":1,"bbox":[462,340,95,42]}
+{"kind":"textbox","id":"sh/mh4zypkn","slide":5,"text":"C 類","textPreview":"C 類","textChars":3,"textLines":1,"bbox":[572,346,170,28]}
+{"kind":"textbox","id":"sh/7idgra18","slide":5,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[797,340,95,42]}
+{"kind":"textbox","id":"sh/b2twzqh0","slide":5,"text":"人工確認","textPreview":"人工確認","textChars":4,"textLines":1,"bbox":[907,346,170,28]}
+{"kind":"textbox","id":"sh/q10v6l0f","slide":5,"text":"comparison attempt：1 筆  |  completion receipt：1 份  |  delivery：1 份","textPreview":"comparison attempt：1 筆  |  completion receipt：1 份  |  delivery：1 份","textChars":66,"textLines":1,"bbox":[462,450,680,30]}
+{"kind":"textbox","id":"sh/xobe1gzq","slide":5,"text":"階段性開發成果  |  5/14","textPreview":"階段性開發成果  |  5/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/f2s5ia","slide":5,"text":"來源：芯洲案件正式 CLI 執行結果。"}
+{"kind":"slide","id":"sl/o0tqzw","slide":6,"title":"A／B／C delivery 的交付內容","textShapes":13}
+{"kind":"textbox","id":"sh/rmpwvmhk","slide":6,"text":"A／B／C delivery 的交付內容","textPreview":"A／B／C delivery 的交付內容","textChars":20,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/c7ixori5","slide":6,"text":"交付目錄保留來源檔案 bytes 與 SHA-256，主管可直接檢視交付規模","textPreview":"交付目錄保留來源檔案 bytes 與 SHA-256，主管可直接檢視交付規模","textChars":38,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/d8rexwzq","slide":6,"bbox":[68,175,350,310]}
+{"kind":"textbox","id":"sh/ihgfih03","slide":6,"text":"A 類","textPreview":"A 類","textChars":3,"textLines":1,"bbox":[96,204,170,33]}
+{"kind":"textbox","id":"sh/3ipwrmho","slide":6,"text":"378 個檔案","textPreview":"378 個檔案","textChars":7,"textLines":1,"bbox":[96,260,260,47]}
+{"kind":"textbox","id":"sh/4jyxkri9","slide":6,"text":"客戶新增檔案\nCustomerSource","textPreview":"客戶新增檔案 | CustomerSource","textChars":21,"textLines":2,"bbox":[96,330,295,75]}
+{"kind":"shape","id":"sh/5k7etwzu","slide":6,"bbox":[458,175,350,310]}
+{"kind":"textbox","id":"sh/md0ful07","slide":6,"text":"B 類","textPreview":"B 類","textChars":3,"textLines":1,"bbox":[486,204,170,33]}
+{"kind":"textbox","id":"sh/netg36hs","slide":6,"text":"30 個檔案","textPreview":"30 個檔案","textChars":6,"textLines":1,"bbox":[486,260,260,47]}
+{"kind":"textbox","id":"sh/bmtsrelo","slide":6,"text":"15 項差異 × 客戶／來源 OOTB\nCustomerSource + OOTBSource","textPreview":"15 項差異 × 客戶／來源 OOTB | CustomerSource + OOTBSource","textChars":47,"textLines":2,"bbox":[486,330,295,75]}
+{"kind":"shape","id":"sh/a1kry94j","slide":6,"bbox":[848,175,350,310]}
+{"kind":"textbox","id":"sh/xovato3u","slide":6,"text":"C 類","textPreview":"C 類","textChars":3,"textLines":1,"bbox":[876,204,170,33]}
+{"kind":"textbox","id":"sh/cnm90jm9","slide":6,"text":"54 個檔案","textPreview":"54 個檔案","textChars":6,"textLines":1,"bbox":[876,260,260,47]}
+{"kind":"textbox","id":"sh/zqdsvel0","slide":6,"text":"18 項差異 × 客戶／來源 OOTB／R38\nCustomerSource + OOTBSource + OOTBR38","textPreview":"18 項差異 × 客戶／來源 OOTB／R38 | CustomerSource + OOTBSource + OOTBR38","textChars":61,"textLines":2,"bbox":[876,330,295,75]}
+{"kind":"shape","id":"sh/yp4r294f","slide":6,"bbox":[68,535,1140,62]}
+{"kind":"textbox","id":"sh/lsvaxo36","slide":6,"text":"正式 delivery：462 個檔案  |  delivery-manifest.json 保存每個交付檔案的 SHA-256","textPreview":"正式 delivery：462 個檔案  |  delivery-manifest.json 保存每個交付檔案的 SHA-256","textChars":64,"textLines":1,"bbox":[92,552,1090,29]}
+{"kind":"textbox","id":"sh/krm94jml","slide":6,"text":"階段性開發成果  |  6/14","textPreview":"階段性開發成果  |  6/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/o0tqzw","slide":6,"text":"A：377 個自動分類檔案，加上 1 個人工 review 決策為 A；B：15×2；C：18×3；總數 462。"}
+{"kind":"slide","id":"sl/7sql1n","slide":7,"title":"Core Tree 程序對照表","textShapes":48}
+{"kind":"textbox","id":"sh/i9g76hgv","slide":7,"text":"Core Tree 程序對照表","textPreview":"Core Tree 程序對照表","textChars":15,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/5c7qhwzm","slide":7,"text":"程序、對應 Markdown、Codex Prompt 與主要產出","textPreview":"程序、對應 Markdown、Codex Prompt 與主要產出","textChars":33,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/4byp8ry1","slide":7,"bbox":[60,135,55,42]}
+{"kind":"textbox","id":"sh/vm58b2h4","slide":7,"text":"順序","textPreview":"順序","textChars":2,"textLines":1,"bbox":[68,145,39,22]}
+{"kind":"shape","id":"sh/ulw72xgz","slide":7,"bbox":[120,135,180,42]}
+{"kind":"textbox","id":"sh/h87qdcza","slide":7,"text":"程序","textPreview":"程序","textChars":2,"textLines":1,"bbox":[128,145,164,22]}
+{"kind":"shape","id":"sh/wnyp47yp","slide":7,"bbox":[315,135,280,42]}
+{"kind":"textbox","id":"sh/fi98n6ho","slide":7,"text":"對應 Markdown","textPreview":"對應 Markdown","textChars":11,"textLines":1,"bbox":[323,145,264,22]}
+{"kind":"shape","id":"sh/eh0re1g3","slide":7,"bbox":[610,135,305,42]}
+{"kind":"textbox","id":"sh/s7ahwnqt","slide":7,"text":"Codex Prompt 範例","textPreview":"Codex Prompt 範例","textChars":15,"textLines":1,"bbox":[618,145,289,22]}
+{"kind":"shape","id":"sh/d8jipsre","slide":7,"bbox":[930,135,260,42]}
+{"kind":"textbox","id":"sh/q58zud8n","slide":7,"text":"主要產出","textPreview":"主要產出","textChars":4,"textLines":1,"bbox":[938,145,244,22]}
+{"kind":"shape","id":"sh/r61gni98","slide":7,"bbox":[60,177,1140,56]}
+{"kind":"textbox","id":"sh/4jqhs3qh","slide":7,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[68,187,39,37]}
+{"kind":"textbox","id":"sh/5kzyl8r2","slide":7,"text":"建立目錄骨架","textPreview":"建立目錄骨架","textChars":6,"textLines":1,"bbox":[128,187,164,37]}
+{"kind":"textbox","id":"sh/ih8zqdsb","slide":7,"text":"codex-case-scaffold-prompt.md","textPreview":"codex-case-scaffold-prompt.md","textChars":29,"textLines":1,"bbox":[323,187,264,37]}
+{"kind":"textbox","id":"sh/3ihgji9w","slide":7,"text":"DIRECTORY_SCAFFOLD_ONLY","textPreview":"DIRECTORY_SCAFFOLD_ONLY","textChars":23,"textLines":1,"bbox":[618,187,289,37]}
+{"kind":"textbox","id":"sh/gfqho3al","slide":7,"text":"案件目錄與非正式範本","textPreview":"案件目錄與非正式範本","textChars":10,"textLines":1,"bbox":[938,187,244,37]}
+{"kind":"shape","id":"sh/hgzyh8r6","slide":7,"bbox":[60,234,1140,56]}
+{"kind":"textbox","id":"sh/x07650fi","slide":7,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[68,244,39,37]}
+{"kind":"textbox","id":"sh/czy5wvyx","slide":7,"text":"產生 Core Tree 輸入證據","textPreview":"產生 Core Tree 輸入證據","textChars":17,"textLines":1,"bbox":[128,244,164,37]}
+{"kind":"textbox","id":"sh/bypo3qxc","slide":7,"text":"codex-core-tree-evidence-prompt.md","textPreview":"codex-core-tree-evidence-prompt.md","textChars":34,"textLines":1,"bbox":[323,244,264,37]}
+{"kind":"textbox","id":"sh/axwnulg7","slide":7,"text":"EVIDENCE_PREVIEW → EVIDENCE_WRITE","textPreview":"EVIDENCE_PREVIEW → EVIDENCE_WRITE","textChars":33,"textLines":1,"bbox":[618,244,289,37]}
+{"kind":"textbox","id":"sh/pwn610fm","slide":7,"text":"三組 Evidence Set","textPreview":"三組 Evidence Set","textChars":15,"textLines":1,"bbox":[938,244,244,37]}
+{"kind":"shape","id":"sh/ove5svy1","slide":7,"bbox":[60,291,1140,56]}
+{"kind":"textbox","id":"sh/nu5ozqxg","slide":7,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[68,301,39,37]}
+{"kind":"textbox","id":"sh/2twnqlgv","slide":7,"text":"建立正式 Core Tree 案件","textPreview":"建立正式 Core Tree 案件","textChars":17,"textLines":1,"bbox":[128,301,164,37]}
+{"kind":"textbox","id":"sh/9sr6dkfq","slide":7,"text":"codex-formal-case-creation-prompt.md","textPreview":"codex-formal-case-creation-prompt.md","textChars":36,"textLines":1,"bbox":[323,301,264,37]}
+{"kind":"textbox","id":"sh/8rip4fy5","slide":7,"text":"案件建立","textPreview":"案件建立","textChars":4,"textLines":1,"bbox":[618,301,289,37]}
+{"kind":"textbox","id":"sh/qds3yhwn","slide":7,"text":"aras-upgrade-case.json、GUID","textPreview":"aras-upgrade-case.json、GUID","textChars":27,"textLines":1,"bbox":[938,301,244,37]}
+{"kind":"shape","id":"sh/rylk7md8","slide":7,"bbox":[60,348,1140,56]}
+{"kind":"textbox","id":"sh/szul0ret","slide":7,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[68,358,39,37]}
+{"kind":"textbox","id":"sh/d0329wve","slide":7,"text":"Core Tree preflight","textPreview":"Core Tree preflight","textChars":19,"textLines":1,"bbox":[128,358,164,37]}
+{"kind":"textbox","id":"sh/i9s3uxwr","slide":7,"text":"runbook.md","textPreview":"runbook.md","textChars":10,"textLines":1,"bbox":[323,358,264,37]}
+{"kind":"textbox","id":"sh/3a1k32dc","slide":7,"text":"執行前置檢查","textPreview":"執行前置檢查","textChars":6,"textLines":1,"bbox":[618,358,289,37]}
+{"kind":"textbox","id":"sh/4balw7eh","slide":7,"text":"Ready／Blocked","textPreview":"Ready／Blocked","textChars":13,"textLines":1,"bbox":[938,358,244,37]}
+{"kind":"shape","id":"sh/5cj25cv2","slide":7,"bbox":[60,405,1140,56]}
+{"kind":"textbox","id":"sh/25c361wv","slide":7,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[68,415,39,37]}
+{"kind":"textbox","id":"sh/n654f6dg","slide":7,"text":"執行 Core Tree 比較","textPreview":"執行 Core Tree 比較","textChars":15,"textLines":1,"bbox":[128,415,164,37]}
+{"kind":"textbox","id":"sh/7y1gvyhw","slide":7,"text":"runbook.md","textPreview":"runbook.md","textChars":10,"textLines":1,"bbox":[323,415,264,37]}
+{"kind":"textbox","id":"sh/mxsz2t0b","slide":7,"text":"執行 Core Tree 比較","textPreview":"執行 Core Tree 比較","textChars":15,"textLines":1,"bbox":[618,415,289,37]}
+{"kind":"textbox","id":"sh/903ix8z2","slide":7,"text":"attempt、A／B／C、review","textPreview":"attempt、A／B／C、review","textChars":20,"textLines":1,"bbox":[938,415,244,37]}
+{"kind":"shape","id":"sh/8zah43ih","slide":7,"bbox":[60,462,1140,56]}
+{"kind":"textbox","id":"sh/zu1gryhk","slide":7,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[68,472,39,37]}
+{"kind":"textbox","id":"sh/ytszyt0z","slide":7,"text":"Review approval","textPreview":"Review approval","textChars":15,"textLines":1,"bbox":[128,472,164,37]}
+{"kind":"textbox","id":"sh/lwjyt8zq","slide":7,"text":"manual-review-approval.md","textPreview":"manual-review-approval.md","textChars":25,"textLines":1,"bbox":[323,472,264,37]}
+{"kind":"textbox","id":"sh/0vah03i5","slide":7,"text":"進行 review approval","textPreview":"進行 review approval","textChars":18,"textLines":1,"bbox":[618,472,289,37]}
+{"kind":"textbox","id":"sh/jql03ih4","slide":7,"text":"manual-review-approval.json","textPreview":"manual-review-approval.json","textChars":27,"textLines":1,"bbox":[938,472,244,37]}
+{"kind":"shape","id":"sh/ipczadgj","slide":7,"bbox":[60,519,1140,56]}
+{"kind":"textbox","id":"sh/gv6x4fy1","slide":7,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[68,529,39,37]}
+{"kind":"textbox","id":"sh/1wfexkfm","slide":7,"text":"Comparison finalization","textPreview":"Comparison finalization","textChars":23,"textLines":1,"bbox":[128,529,164,37]}
+{"kind":"textbox","id":"sh/e9ov25gv","slide":7,"text":"finalization.md","textPreview":"finalization.md","textChars":15,"textLines":1,"bbox":[323,529,264,37]}
+{"kind":"textbox","id":"sh/faxwvaxg","slide":7,"text":"進行 finalization","textPreview":"進行 finalization","textChars":15,"textLines":1,"bbox":[618,529,289,37]}
+{"kind":"textbox","id":"sh/oz6x8zyx","slide":7,"text":"completion-manifest.json","textPreview":"completion-manifest.json","textChars":24,"textLines":1,"bbox":[938,529,244,37]}
+{"kind":"shape","id":"sh/p0fe14fi","slide":7,"bbox":[60,576,1140,56]}
+{"kind":"textbox","id":"sh/2xof6pgr","slide":7,"text":"8","textPreview":"8","textChars":1,"textLines":1,"bbox":[68,586,39,37]}
+{"kind":"textbox","id":"sh/3yxwzuxc","slide":7,"text":"建立正式 A／B／C delivery","textPreview":"建立正式 A／B／C delivery","textChars":19,"textLines":1,"bbox":[128,586,164,37]}
+{"kind":"textbox","id":"sh/c3qxczy9","slide":7,"text":"delivery.md","textPreview":"delivery.md","textChars":11,"textLines":1,"bbox":[323,586,264,37]}
+{"kind":"textbox","id":"sh/d4ze54fe","slide":7,"text":"執行正式 --build-delivery","textPreview":"執行正式 --build-delivery","textChars":21,"textLines":1,"bbox":[618,586,289,37]}
+{"kind":"textbox","id":"sh/l8bm903m","slide":7,"text":"delivery-manifest.json 與交付檔","textPreview":"delivery-manifest.json 與交付檔","textChars":27,"textLines":1,"bbox":[938,586,244,37]}
+{"kind":"textbox","id":"sh/07250f21","slide":7,"text":"階段性開發成果  |  7/14","textPreview":"階段性開發成果  |  7/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/7sql1n","slide":7,"text":"來源：docs/operations/core-tree/procedure-map.md。"}
+{"kind":"slide","id":"sl/zkbnew","slide":8,"title":"Codex Prompt 1：建立目錄骨架","textShapes":15}
+{"kind":"textbox","id":"sh/ju10ve9o","slide":8,"text":"Codex Prompt 1：建立目錄骨架","textPreview":"Codex Prompt 1：建立目錄骨架","textChars":21,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/4vu14jqt","slide":8,"text":"對應文件：codex-case-scaffold-prompt.md","textPreview":"對應文件：codex-case-scaffold-prompt.md","textChars":34,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/5w3ix4re","slide":8,"bbox":[78,145,1124,430]}
+{"kind":"textbox","id":"sh/6xcj698z","slide":8,"text":"請依 codex-case-scaffold-prompt.md 建立案件目錄骨架。","textPreview":"請依 codex-case-scaffold-prompt.md 建立案件目錄骨架。","textChars":42,"textLines":1,"bbox":[96,159,1088,23]}
+{"kind":"shape","id":"sh/ryl0ze9k","slide":8,"bbox":[96,182,1088,23]}
+{"kind":"textbox","id":"sh/szu18jq5","slide":8,"text":"客戶代號：芯洲","textPreview":"客戶代號：芯洲","textChars":7,"textLines":1,"bbox":[96,205,1088,23]}
+{"kind":"textbox","id":"sh/t03i1orq","slide":8,"text":"案件目錄名稱：芯洲","textPreview":"案件目錄名稱：芯洲","textChars":9,"textLines":1,"bbox":[96,228,1088,23]}
+{"kind":"textbox","id":"sh/e1cjat8b","slide":8,"text":"案件根目錄：K:\\70.ArasUpgradeCases","textPreview":"案件根目錄：K:\\70.ArasUpgradeCases","textChars":28,"textLines":1,"bbox":[96,251,1088,23]}
+{"kind":"textbox","id":"sh/f2l03y9g","slide":8,"text":"來源版本：11.0 SP9    來源版本短名稱：11sp9","textPreview":"來源版本：11.0 SP9    來源版本短名稱：11sp9","textChars":30,"textLines":1,"bbox":[96,274,1088,23]}
+{"kind":"textbox","id":"sh/vi107q5c","slide":8,"text":"最終版本：R38        最終版本短名稱：r38","textPreview":"最終版本：R38        最終版本短名稱：r38","textChars":27,"textLines":1,"bbox":[96,297,1088,23]}
+{"kind":"textbox","id":"sh/uhszyl4r","slide":8,"text":"操作者：BCO\\kenny","textPreview":"操作者：BCO\\kenny","textChars":13,"textLines":1,"bbox":[96,320,1088,23]}
+{"kind":"textbox","id":"sh/hkji90ni","slide":8,"text":"執行模式：DIRECTORY_SCAFFOLD_ONLY","textPreview":"執行模式：DIRECTORY_SCAFFOLD_ONLY","textChars":28,"textLines":1,"bbox":[96,343,1088,23]}
+{"kind":"shape","id":"sh/gjah0vmx","slide":8,"bbox":[96,366,1088,23]}
+{"kind":"textbox","id":"sh/7eh03q5g","slide":8,"text":"只建立 Core Tree、Package／DB、案件管理目錄與非正式範本。","textPreview":"只建立 Core Tree、Package／DB、案件管理目錄與非正式範本。","textChars":38,"textLines":1,"bbox":[96,389,1088,23]}
+{"kind":"textbox","id":"sh/6d8zul4v","slide":8,"text":"不得建立 aras-upgrade-case.json 或 .orchestrator\\history.jsonl。","textPreview":"不得建立 aras-upgrade-case.json 或 .orchestrator\\history.jsonl。","textChars":58,"textLines":1,"bbox":[96,412,1088,23]}
+{"kind":"textbox","id":"sh/tgji50nm","slide":8,"text":"不得執行 DB、Package Import、Core Tree preflight 或升級。","textPreview":"不得執行 DB、Package Import、Core Tree preflight 或升級。","textChars":47,"textLines":1,"bbox":[96,435,1088,23]}
+{"kind":"shape","id":"sh/8fqhwvm1","slide":8,"bbox":[78,600,1124,45]}
+{"kind":"textbox","id":"sh/ral0falk","slide":8,"text":"主要產出：案件目錄、Core Tree／Evidence／Package／DB 目錄與非正式範本","textPreview":"主要產出：案件目錄、Core Tree／Evidence／Package／DB 目錄與非正式範本","textChars":48,"textLines":1,"bbox":[100,611,1080,24]}
+{"kind":"textbox","id":"sh/q9cz654z","slide":8,"text":"階段性開發成果  |  8/14","textPreview":"階段性開發成果  |  8/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/zkbnew","slide":8,"text":""}
+{"kind":"slide","id":"sl/0kx365","slide":9,"title":"Codex Prompt 2–4：輸入、證據與正式案件","textShapes":23}
+{"kind":"textbox","id":"sh/9wnq58fu","slide":9,"text":"Codex Prompt 2–4：輸入、證據與正式案件","textPreview":"Codex Prompt 2–4：輸入、證據與正式案件","textChars":27,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/mtcrutgj","slide":9,"text":"依序完成 Core Tree 放置、Evidence Preview／Write、正式案件建立","textPreview":"依序完成 Core Tree 放置、Evidence Preview／Write、正式案件建立","textChars":47,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/nu583yx4","slide":9,"bbox":[65,135,550,445]}
+{"kind":"textbox","id":"sh/wje903el","slide":9,"text":"2. 複製 Core Tree","textPreview":"2. 複製 Core Tree","textChars":15,"textLines":1,"bbox":[92,160,350,30]}
+{"kind":"shape","id":"sh/xkna98f6","slide":9,"bbox":[88,210,500,210]}
+{"kind":"textbox","id":"sh/axwrydwf","slide":9,"text":"請由操作人員將三份 Core Tree 放入：","textPreview":"請由操作人員將三份 Core Tree 放入：","textChars":23,"textLines":1,"bbox":[106,224,464,23]}
+{"kind":"shape","id":"sh/vy5s7yx0","slide":9,"bbox":[106,247,464,23]}
+{"kind":"textbox","id":"sh/cnu9ojyh","slide":9,"text":"...\\customer-11sp9\\tree","textPreview":"...\\customer-11sp9\\tree","textChars":23,"textLines":1,"bbox":[106,270,464,23]}
+{"kind":"textbox","id":"sh/do3qxofm","slide":9,"text":"...\\ootb-11sp9\\tree","textPreview":"...\\ootb-11sp9\\tree","textChars":19,"textLines":1,"bbox":[106,293,464,23]}
+{"kind":"textbox","id":"sh/5kfm1or6","slide":9,"text":"...\\ootb-r38\\tree","textPreview":"...\\ootb-r38\\tree","textChars":17,"textLines":1,"bbox":[106,316,464,23]}
+{"kind":"shape","id":"sh/4j6l8jql","slide":9,"bbox":[106,339,464,23]}
+{"kind":"textbox","id":"sh/3id4ze9g","slide":9,"text":"只確認檔案放置結果。","textPreview":"只確認檔案放置結果。","textChars":10,"textLines":1,"bbox":[106,362,464,23]}
+{"kind":"textbox","id":"sh/ih436t8v","slide":9,"text":"不得由 Codex 自動複製、搬移、解析或修改 Tree。","textPreview":"不得由 Codex 自動複製、搬移、解析或修改 Tree。","textChars":29,"textLines":1,"bbox":[106,385,464,23]}
+{"kind":"textbox","id":"sh/dofm58ri","slide":9,"text":"3–4. 證據處理","textPreview":"3–4. 證據處理","textChars":9,"textLines":1,"bbox":[92,452,350,30]}
+{"kind":"textbox","id":"sh/cn6lc3qx","slide":9,"text":"執行模式：EVIDENCE_PREVIEW\n確認預覽後：EVIDENCE_WRITE\n只建立 Missing 的四份 Evidence 文件，不覆寫既有文件。","textPreview":"執行模式：EVIDENCE_PREVIEW | 確認預覽後：EVIDENCE_WRITE | 只建立 Missing 的四份 Evidence 文件，不覆寫既有文件。","textChars":79,"textLines":3,"bbox":[90,492,490,65]}
+{"kind":"shape","id":"sh/rmx43y9c","slide":9,"bbox":[655,135,560,445]}
+{"kind":"textbox","id":"sh/qlo3at8r","slide":9,"text":"5. 正式案件建立","textPreview":"5. 正式案件建立","textChars":9,"textLines":1,"bbox":[684,160,380,30]}
+{"kind":"shape","id":"sh/1czm98re","slide":9,"bbox":[682,210,506,290]}
+{"kind":"textbox","id":"sh/0bqlg3qt","slide":9,"text":"請依 codex-formal-case-creation-prompt.md","textPreview":"請依 codex-formal-case-creation-prompt.md","textChars":39,"textLines":1,"bbox":[700,224,470,23]}
+{"kind":"textbox","id":"sh/krixsb2h","slide":9,"text":"建立正式 Core Tree 工作流案件。","textPreview":"建立正式 Core Tree 工作流案件。","textChars":21,"textLines":1,"bbox":[700,247,470,23]}
+{"kind":"shape","id":"sh/lsre1gj2","slide":9,"bbox":[700,270,470,23]}
+{"kind":"textbox","id":"sh/y5gfq1kb","slide":9,"text":"客戶代號：芯洲","textPreview":"客戶代號：芯洲","textChars":7,"textLines":1,"bbox":[700,293,470,23]}
+{"kind":"textbox","id":"sh/j6pwz6lw","slide":9,"text":"案件目錄名稱：芯洲","textPreview":"案件目錄名稱：芯洲","textChars":9,"textLines":1,"bbox":[700,316,470,23]}
+{"kind":"textbox","id":"sh/8vixwv2d","slide":9,"text":"案件根目錄：K:\\70.ArasUpgradeCases","textPreview":"案件根目錄：K:\\70.ArasUpgradeCases","textChars":28,"textLines":1,"bbox":[700,339,470,23]}
+{"kind":"textbox","id":"sh/twry50jy","slide":9,"text":"來源版本：11.0 SP9 / 11sp9","textPreview":"來源版本：11.0 SP9 / 11sp9","textChars":21,"textLines":1,"bbox":[700,362,470,23]}
+{"kind":"textbox","id":"sh/6t0fulk7","slide":9,"text":"最終版本：R38 / r38","textPreview":"最終版本：R38 / r38","textChars":14,"textLines":1,"bbox":[700,385,470,23]}
+{"kind":"textbox","id":"sh/7u9w3q1s","slide":9,"text":"操作者：BCO\\kenny","textPreview":"操作者：BCO\\kenny","textChars":13,"textLines":1,"bbox":[700,408,470,23]}
+{"kind":"shape","id":"sh/ozexkr29","slide":9,"bbox":[700,431,470,23]}
+{"kind":"textbox","id":"sh/907etw3u","slide":9,"text":"案件建立","textPreview":"案件建立","textChars":4,"textLines":1,"bbox":[700,454,470,23]}
+{"kind":"textbox","id":"sh/rud0zulc","slide":9,"text":"正式能力：--create-core-tree-case；不得手工建立或編輯 aras-upgrade-case.json。","textPreview":"正式能力：--create-core-tree-case；不得手工建立或編輯 aras-upgrade-case.json。","textChars":62,"textLines":1,"bbox":[684,525,500,40]}
+{"kind":"textbox","id":"sh/qt4z6p4r","slide":9,"text":"階段性開發成果  |  9/14","textPreview":"階段性開發成果  |  9/14","textChars":16,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/0kx365","slide":9,"text":""}
+{"kind":"slide","id":"sl/6jii40","slide":10,"title":"Codex Prompt 6：Core Tree 比較","textShapes":12}
+{"kind":"textbox","id":"sh/c3i1k7md","slide":10,"text":"Codex Prompt 6：Core Tree 比較","textPreview":"Codex Prompt 6：Core Tree 比較","textChars":27,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/b2p0r25s","slide":10,"text":"對應文件：runbook.md；正式比較前必須通過唯讀 preflight","textPreview":"對應文件：runbook.md；正式比較前必須通過唯讀 preflight","textChars":37,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/a1gjix47","slide":10,"bbox":[90,165,1100,365]}
+{"kind":"textbox","id":"sh/p07ipsn2","slide":10,"text":"請依正式案件清單執行 Core Tree 比較。","textPreview":"請依正式案件清單執行 Core Tree 比較。","textChars":24,"textLines":1,"bbox":[108,179,1064,23]}
+{"kind":"shape","id":"sh/ozyhgnmh","slide":10,"bbox":[108,202,1064,23]}
+{"kind":"textbox","id":"sh/nyp0ni5w","slide":10,"text":"案件根目錄：K:\\70.ArasUpgradeCases\\芯洲","textPreview":"案件根目錄：K:\\70.ArasUpgradeCases\\芯洲","textChars":31,"textLines":1,"bbox":[108,225,1064,23]}
+{"kind":"textbox","id":"sh/2xgzedob","slide":10,"text":"案件識別：芯洲","textPreview":"案件識別：芯洲","textChars":7,"textLines":1,"bbox":[108,248,1064,23]}
+{"kind":"textbox","id":"sh/9wbi1cn6","slide":10,"text":"操作者：BCO\\kenny","textPreview":"操作者：BCO\\kenny","textChars":13,"textLines":1,"bbox":[108,271,1064,23]}
+{"kind":"shape","id":"sh/8v21srml","slide":10,"bbox":[108,294,1064,23]}
+{"kind":"textbox","id":"sh/qtgr2x0z","slide":10,"text":"先執行唯讀 preflight；只有 Ready 才執行正式比較。","textPreview":"先執行唯讀 preflight；只有 Ready 才執行正式比較。","textChars":33,"textLines":1,"bbox":[108,317,1064,23]}
+{"kind":"textbox","id":"sh/rup8v2hk","slide":10,"text":"使用新的 comparison attempt，不覆寫既有 attempt。","textPreview":"使用新的 comparison attempt，不覆寫既有 attempt。","textChars":38,"textLines":1,"bbox":[108,340,1064,23]}
+{"kind":"textbox","id":"sh/cvy947i5","slide":10,"text":"不得修改三份輸入 Tree、Evidence 或 R38。","textPreview":"不得修改三份輸入 Tree、Evidence 或 R38。","textChars":29,"textLines":1,"bbox":[108,363,1064,23]}
+{"kind":"textbox","id":"sh/dw7qxczq","slide":10,"text":"不得執行 DB、Package Import 或升級。","textPreview":"不得執行 DB、Package Import 或升級。","textChars":27,"textLines":1,"bbox":[108,386,1064,23]}
+{"kind":"shape","id":"sh/2pwryx03","slide":10,"bbox":[90,565,1100,55]}
+{"kind":"textbox","id":"sh/3q58r2ho","slide":10,"text":"主要產出：preflight 結果、comparison attempt、A／B／C 分類、manual-reviews.json 與 append-only history","textPreview":"主要產出：preflight 結果、comparison attempt、A／B／C 分類、manual-reviews.json 與 append-only history","textChars":87,"textLines":1,"bbox":[108,581,1065,25]}
+{"kind":"textbox","id":"sh/4ry90ni9","slide":10,"text":"階段性開發成果  |  10/14","textPreview":"階段性開發成果  |  10/14","textChars":17,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/6jii40","slide":10,"text":""}
+{"kind":"slide","id":"sl/vp59zj","slide":11,"title":"Codex Prompt 7–8：人工 Review、Approval 與 Finalization","textShapes":16}
+{"kind":"textbox","id":"sh/ilgzqtw7","slide":11,"text":"Codex Prompt 7–8：人工 Review、Approval 與 Finalization","textPreview":"Codex Prompt 7–8：人工 Review、Approval 與 Finalization","textChars":50,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/5orilovi","slide":11,"text":"人工決策與正式收據分離，原 comparison attempt 永不覆寫","textPreview":"人工決策與正式收據分離，原 comparison attempt 永不覆寫","textChars":37,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/4nyhs3ex","slide":11,"bbox":[65,145,550,420]}
+{"kind":"textbox","id":"sh/vip0fexg","slide":11,"text":"7. 人工更新 review register","textPreview":"7. 人工更新 review register","textChars":23,"textLines":1,"bbox":[92,172,400,31]}
+{"kind":"shape","id":"sh/uhgzm9wv","slide":11,"bbox":[86,220,507,255]}
+{"kind":"textbox","id":"sh/hk7ihovm","slide":11,"text":"請由負責操作人員依 manual-reviews.json 檢視並手動更新：","textPreview":"請由負責操作人員依 manual-reviews.json 檢視並手動更新：","textChars":38,"textLines":1,"bbox":[104,234,471,23]}
+{"kind":"shape","id":"sh/gjyhoje1","slide":11,"bbox":[104,257,471,23]}
+{"kind":"textbox","id":"sh/7e5gbexk","slide":11,"text":"...\\core-tree\\attempts\\<attempt-id>\\manual-review-register.md","textPreview":"...\\core-tree\\attempts\\<attempt-id>\\manual-review-register.md","textChars":61,"textLines":1,"bbox":[104,280,471,23]}
+{"kind":"shape","id":"sh/6dwzi9wz","slide":11,"bbox":[104,303,471,23]}
+{"kind":"textbox","id":"sh/4rqtgbqp","slide":11,"text":"每筆 review 填入合法 Decision、Approver、ISO 8601 Approved at，","textPreview":"每筆 review 填入合法 Decision、Approver、ISO 8601 Approved at，","textChars":54,"textLines":1,"bbox":[104,326,471,23]}
+{"kind":"textbox","id":"sh/5sza9g7a","slide":11,"text":"並標示 Resolved。","textPreview":"並標示 Resolved。","textChars":13,"textLines":1,"bbox":[104,349,471,23]}
+{"kind":"textbox","id":"sh/ip8be18z","slide":11,"text":"不得修改 Review ID、Relative path、Issue code 或 manual-reviews.json。","textPreview":"不得修改 Review ID、Relative path、Issue code 或 manual-reviews.json。","textChars":62,"textLines":1,"bbox":[104,372,471,23]}
+{"kind":"shape","id":"sh/3qhs76p4","slide":11,"bbox":[655,145,560,420]}
+{"kind":"textbox","id":"sh/gn6tcrqt","slide":11,"text":"8. Review approval／finalization","textPreview":"8. Review approval／finalization","textChars":31,"textLines":1,"bbox":[684,172,430,31]}
+{"kind":"shape","id":"sh/hoza5w7e","slide":11,"bbox":[678,220,514,210]}
+{"kind":"textbox","id":"sh/uloba18n","slide":11,"text":"請對目前 comparison attempt 執行正式 review approval／finalization。","textPreview":"請對目前 comparison attempt 執行正式 review approval／finalization。","textChars":58,"textLines":1,"bbox":[696,234,478,23]}
+{"kind":"shape","id":"sh/vmxs36p8","slide":11,"bbox":[696,257,478,23]}
+{"kind":"textbox","id":"sh/0jatovqx","slide":11,"text":"所有 review row 必須為 Resolved 且 checksum 相符。","textPreview":"所有 review row 必須為 Resolved 且 checksum 相符。","textChars":41,"textLines":1,"bbox":[696,280,478,23]}
+{"kind":"textbox","id":"sh/1kjuh07i","slide":11,"text":"先使用 --approve-reviews，再使用 --finalize-comparison。","textPreview":"先使用 --approve-reviews，再使用 --finalize-comparison。","textChars":48,"textLines":1,"bbox":[696,303,478,23]}
+{"kind":"textbox","id":"sh/90fa10zm","slide":11,"text":"不得覆寫原始 attempt。","textPreview":"不得覆寫原始 attempt。","textChars":15,"textLines":1,"bbox":[696,326,478,23]}
+{"kind":"textbox","id":"sh/of6t8vi1","slide":11,"text":"不得手工建立 approval 或 completion receipt。","textPreview":"不得手工建立 approval 或 completion receipt。","textChars":37,"textLines":1,"bbox":[696,349,478,23]}
+{"kind":"textbox","id":"sh/nexszqhg","slide":11,"text":"主要產出：manual-review-approval.json、completion-manifest.json","textPreview":"主要產出：manual-review-approval.json、completion-manifest.json","textChars":57,"textLines":1,"bbox":[684,490,500,35]}
+{"kind":"textbox","id":"sh/mdob6l0b","slide":11,"text":"階段性開發成果  |  11/14","textPreview":"階段性開發成果  |  11/14","textChars":17,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/vp59zj","slide":11,"text":""}
+{"kind":"slide","id":"sl/u0knra","slide":12,"title":"Codex Prompt 9：正式 A／B／C delivery","textShapes":12}
+{"kind":"textbox","id":"sh/p83elcrq","slide":12,"text":"Codex Prompt 9：正式 A／B／C delivery","textPreview":"Codex Prompt 9：正式 A／B／C delivery","textChars":32,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/25svah8f","slide":12,"text":"對應文件：delivery.md；從已完成的 comparison completion receipt 建立新交付目錄","textPreview":"對應文件：delivery.md；從已完成的 comparison completion receipt 建立新交付目錄","textChars":60,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/361wjm90","slide":12,"bbox":[90,155,1100,375]}
+{"kind":"textbox","id":"sh/gjad87a9","slide":12,"text":"請執行正式 --build-delivery，","textPreview":"請執行正式 --build-delivery，","textChars":23,"textLines":1,"bbox":[108,169,1064,23]}
+{"kind":"textbox","id":"sh/1kjehcru","slide":12,"text":"使用已完成的 comparison completion receipt 建立新的 Core Tree A／B／C delivery。","textPreview":"使用已完成的 comparison completion receipt 建立新的 Core Tree A／B／C delivery。","textChars":67,"textLines":1,"bbox":[108,192,1064,23]}
+{"kind":"shape","id":"sh/ehsv6xs3","slide":12,"bbox":[108,215,1064,23]}
+{"kind":"textbox","id":"sh/fi1cf29o","slide":12,"text":"要求：","textPreview":"要求：","textChars":3,"textLines":1,"bbox":[108,238,1064,23]}
+{"kind":"textbox","id":"sh/sfqd4nad","slide":12,"text":"- delivery output 必須是 core-tree\\deliveries 下的新目錄；","textPreview":"- delivery output 必須是 core-tree\\deliveries 下的新目錄；","textChars":49,"textLines":1,"bbox":[108,261,1064,23]}
+{"kind":"textbox","id":"sh/tgjudsri","slide":12,"text":"- customer、source OOTB、target OOTB 與 Server 規則輸入保持 immutable；","textPreview":"- customer、source OOTB、target OOTB 與 Server 規則輸入保持 immutable；","textChars":61,"textLines":1,"bbox":[108,284,1064,23]}
+{"kind":"textbox","id":"sh/pgry1kzu","slide":12,"text":"- C 類只依 target path 改用交付檔名，原始 bytes 不轉換；","textPreview":"- C 類只依 target path 改用交付檔名，原始 bytes 不轉換；","textChars":40,"textLines":1,"bbox":[108,307,1064,23]}
+{"kind":"textbox","id":"sh/ofix8fy9","slide":12,"text":"- 不覆寫既有 delivery；","textPreview":"- 不覆寫既有 delivery；","textChars":17,"textLines":1,"bbox":[108,330,1064,23]}
+{"kind":"textbox","id":"sh/ne9gzuh4","slide":12,"text":"- 不執行 DB、Package Import、Aras Export 或升級。","textPreview":"- 不執行 DB、Package Import、Aras Export 或升級。","textChars":40,"textLines":1,"bbox":[108,353,1064,23]}
+{"kind":"shape","id":"sh/2d0f6pgj","slide":12,"bbox":[90,570,1100,52]}
+{"kind":"textbox","id":"sh/1c7yxkzy","slide":12,"text":"主要產出：A／B／C 交付目錄、delivery-manifest.json、檔案 SHA-256 與 delivery history","textPreview":"主要產出：A／B／C 交付目錄、delivery-manifest.json、檔案 SHA-256 與 delivery history","textChars":68,"textLines":1,"bbox":[108,585,1060,25]}
+{"kind":"textbox","id":"sh/0ryx4fyd","slide":12,"text":"階段性開發成果  |  12/14","textPreview":"階段性開發成果  |  12/14","textChars":17,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/u0knra","slide":12,"text":""}
+{"kind":"slide","id":"sl/joyzgg","slide":13,"title":"主管檢視重點","textShapes":17}
+{"kind":"textbox","id":"sh/szy1gv2t","slide":13,"text":"主管檢視重點","textPreview":"主管檢視重點","textChars":6,"textLines":1,"bbox":[62,34,1156,46]}
+{"kind":"textbox","id":"sh/ryp0nq18","slide":13,"text":"目前已完成 Core Tree 工作流；Package／DB 升級維持獨立受控範圍","textPreview":"目前已完成 Core Tree 工作流；Package／DB 升級維持獨立受控範圍","textChars":41,"textLines":1,"bbox":[64,83,1100,28]}
+{"kind":"shape","id":"sh/qxwjelkn","slide":13,"bbox":[65,150,540,385]}
+{"kind":"textbox","id":"sh/5wnilgj2","slide":13,"text":"已具備","textPreview":"已具備","textChars":3,"textLines":1,"bbox":[95,182,200,32]}
+{"kind":"textbox","id":"sh/4ve1cb2h","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[95,245,18,28]}
+{"kind":"textbox","id":"sh/3u50j61c","slide":13,"text":"正式案件、Evidence、comparison 與 history","textPreview":"正式案件、Evidence、comparison 與 history","textChars":34,"textLines":1,"bbox":[121,245,424,30]}
+{"kind":"textbox","id":"sh/itwja1kr","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[95,320,18,28]}
+{"kind":"textbox","id":"sh/psr2hkjm","slide":13,"text":"人工 review approval 與 completion receipt","textPreview":"人工 review approval 與 completion receipt","textChars":39,"textLines":1,"bbox":[121,320,424,30]}
+{"kind":"textbox","id":"sh/ori1of21","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[95,395,18,28]}
+{"kind":"textbox","id":"sh/etcna5ob","slide":13,"text":"可驗證 A／B／C delivery 與 checksum","textPreview":"可驗證 A／B／C delivery 與 checksum","textChars":29,"textLines":1,"bbox":[121,395,424,30]}
+{"kind":"shape","id":"sh/zulo3a5w","slide":13,"bbox":[650,150,565,385]}
+{"kind":"textbox","id":"sh/0vupcf6h","slide":13,"text":"後續關卡","textPreview":"後續關卡","textChars":4,"textLines":1,"bbox":[680,182,220,32]}
+{"kind":"textbox","id":"sh/1w365kn2","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,245,18,28]}
+{"kind":"textbox","id":"sh/qpsn65of","slide":13,"text":"確認 Package／DB 跳點與官方 SOP／Support","textPreview":"確認 Package／DB 跳點與官方 SOP／Support","textChars":31,"textLines":1,"bbox":[706,245,449,30]}
+{"kind":"textbox","id":"sh/rq1oza50","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,320,18,28]}
+{"kind":"textbox","id":"sh/cra58v6l","slide":13,"text":"每跳執行、登入驗證與 DB 備份","textPreview":"每跳執行、登入驗證與 DB 備份","textChars":16,"textLines":1,"bbox":[706,320,449,30]}
+{"kind":"textbox","id":"sh/ds3610nq","slide":13,"text":"•","textPreview":"•","textChars":1,"textLines":1,"bbox":[680,395,18,28]}
+{"kind":"textbox","id":"sh/alw7ipoj","slide":13,"text":"整合 R38 DB 與 R38 Core Tree 的最終交付","textPreview":"整合 R38 DB 與 R38 Core Tree 的最終交付","textChars":31,"textLines":1,"bbox":[706,395,449,30]}
+{"kind":"textbox","id":"sh/bm5obu54","slide":13,"text":"階段性開發成果  |  13/14","textPreview":"階段性開發成果  |  13/14","textChars":17,"textLines":1,"bbox":[62,684,1150,18]}
+{"kind":"notes","id":"nt/joyzgg","slide":13,"text":""}
+{"kind":"slide","id":"sl/8aino7","slide":14,"title":"本階段結論","textShapes":5}
+{"kind":"textbox","id":"sh/o3yt8jmh","slide":14,"text":"本階段結論","textPreview":"本階段結論","textChars":5,"textLines":1,"bbox":[80,126,600,52]}
+{"kind":"textbox","id":"sh/325sfelc","slide":14,"text":"Core Tree 比較程序已形成可追溯、可核驗的正式交付能力","textPreview":"Core Tree 比較程序已形成可追溯、可核驗的正式交付能力","textChars":31,"textLines":1,"bbox":[82,206,980,40]}
+{"kind":"shape","id":"sh/21wb694r","slide":14,"bbox":[82,310,1100,120]}
+{"kind":"textbox","id":"sh/d87alo3e","slide":14,"text":"正式鏈結：Evidence → Preflight → Comparison → Review approval → Finalization → A／B／C delivery","textPreview":"正式鏈結：Evidence → Preflight → Comparison → Review approval → Finalization → A／B／C delivery","textChars":88,"textLines":1,"bbox":[108,350,1048,33]}
+{"kind":"textbox","id":"sh/c7ytcj2t","slide":14,"text":"下一階段：依相同治理原則展開 Package／DB 升級跳點流程","textPreview":"下一階段：依相同治理原則展開 Package／DB 升級跳點流程","textChars":32,"textLines":1,"bbox":[82,520,900,32]}
+{"kind":"textbox","id":"sh/b6psjel8","slide":14,"text":"BCO\\Kenny、Benjamin","textPreview":"BCO\\Kenny、Benjamin","textChars":18,"textLines":1,"bbox":[82,606,500,28]}
+{"kind":"notes","id":"nt/8aino7","slide":14,"text":""}

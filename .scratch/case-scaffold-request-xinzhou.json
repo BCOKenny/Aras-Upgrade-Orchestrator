@@ -1,0 +1,11 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases",
+  "caseDirectoryName": "芯洲",
+  "customerCode": "芯洲",
+  "sourceVersion": "11.0 SP9",
+  "sourceSlug": "11sp9",
+  "targetVersion": "R38",
+  "targetSlug": "r38",
+  "actor": "BCO\\kenny",
+  "executionMode": "DIRECTORY_SCAFFOLD_ONLY"
+}

@@ -3,7 +3,8 @@ namespace ArasUpgradeOrchestrator.Core.Rules;
 public enum RuleSetKind
 {
     Rule1,
-    Rule2
+    Rule2,
+    CustomerPatchComparison
 }
 
 public enum RuleSetScope
@@ -21,7 +22,8 @@ public enum RuleStepKind
     PreferSourceUnderTargetPath,
     KeepTargetForValuePairs,
     KeepTargetNamedProperties,
-    DefaultPreferSourceUnlessSourceEmpty
+    DefaultPreferSourceUnlessSourceEmpty,
+    CustomerPatchRetainItems
 }
 
 public enum RuleValueConditionKind
@@ -94,6 +96,12 @@ public sealed record RuleActor(string Name, RuleActorKind Kind);
 
 public sealed record RulePublicationApproval(RuleActor Actor, string EvidenceReference);
 
+public sealed record RuleExecutionAudit(
+    string ApprovedBy,
+    string ExecutedBy,
+    string ApprovalReceiptReference,
+    string RequestChecksum);
+
 public sealed record PublishedRuleSet(
     Guid RuleSetId,
     Guid SourceDraftId,
@@ -107,21 +115,23 @@ public sealed record PublishedRuleSet(
     DateTimeOffset PublishedAt,
     string PublishedBy,
     string ApprovalEvidenceReference,
-    string ContentChecksum)
+    string ContentChecksum,
+    RuleExecutionAudit? ExecutionAudit = null)
 {
     public static PublishedRuleSet Create(
         RuleSetDraft draft,
         int version,
         DateTimeOffset publishedAt,
         string publishedBy,
-        string evidenceReference)
+        string evidenceReference,
+        RuleExecutionAudit? executionAudit = null)
     {
         ArgumentNullException.ThrowIfNull(draft);
         var checksum = RuleSetCanonicalizer.Checksum(draft.DisplayName, draft.Kind, draft.Scope,
             draft.SourceVersion, draft.TargetVersion, draft.Steps);
         return new PublishedRuleSet(draft.RuleSetId, draft.DraftId, version, draft.DisplayName, draft.Kind, draft.Scope,
             draft.SourceVersion, draft.TargetVersion, draft.Steps.ToArray(), publishedAt, publishedBy,
-            evidenceReference, checksum);
+            evidenceReference, checksum, executionAudit);
     }
 }
 

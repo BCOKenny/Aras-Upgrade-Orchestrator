@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using ArasUpgradeOrchestrator.Core.Cases;
 using ArasUpgradeOrchestrator.Core.CoreTrees;
@@ -9,19 +10,104 @@ var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     WriteIndented = true,
     PropertyNameCaseInsensitive = true
 };
+var compactJsonOptions = new JsonSerializerOptions(jsonOptions)
+{
+    WriteIndented = false
+};
 
 if (args is ["--help"] or ["-h"] or [])
 {
     Console.WriteLine("Core Tree offline test CLI");
     Console.WriteLine("Build once: dotnet build ArasUpgradeOrchestrator.sln --configuration Release --no-restore");
+    Console.WriteLine("Create a non-formal case directory scaffold: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --validate-case-directory-scaffold <request.json>");
+    Console.WriteLine("                              dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --scaffold-case-directory <request.json>");
     Console.WriteLine("Create a Core Tree workflow case: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --create-core-tree-case <request.json>");
     Console.WriteLine("Run the compiled CLI: dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --preflight <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --request <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --approve-reviews <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --finalize-comparison <request.json>");
     Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --build-delivery <request.json>");
+    Console.WriteLine("                         dotnet tools/ArasUpgradeOrchestrator.CoreTree.Cli/bin/Release/net8.0/ArasUpgradeOrchestrator.CoreTree.Cli.dll --evidence-preview|--evidence-write|--verify-evidence <request.json>");
     Console.WriteLine("The request must contain case roots, three version evidences, Server rule paths, and a Safety whitelist for --request.");
     return 0;
+}
+
+if (args is ["--validate-case-directory-scaffold", var scaffoldRequestPath] && !string.IsNullOrWhiteSpace(scaffoldRequestPath))
+{
+    try
+    {
+        var scaffoldInput = JsonSerializer.Deserialize<CaseDirectoryScaffoldRequest>(
+            await File.ReadAllTextAsync(scaffoldRequestPath, Encoding.UTF8), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        var plan = new CaseDirectoryScaffoldCommand().Validate(scaffoldInput);
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            Status = "Validated",
+            plan.CaseRoot,
+            plan.ExecutionMode,
+            plan.TargetPath,
+            plan.DirectoryPaths,
+            plan.TemplatePaths,
+            plan.ForbiddenFormalPaths,
+            plan.ScaffoldIdentifier
+        }, compactJsonOptions));
+        return 0;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, compactJsonOptions);
+    }
+}
+
+if (args is ["--scaffold-case-directory", var scaffoldApplyRequestPath] && !string.IsNullOrWhiteSpace(scaffoldApplyRequestPath))
+{
+    try
+    {
+        var scaffoldInput = JsonSerializer.Deserialize<CaseDirectoryScaffoldRequest>(
+            await File.ReadAllTextAsync(scaffoldApplyRequestPath, Encoding.UTF8), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        var result = await new CaseDirectoryScaffoldCommand().ApplyAsync(scaffoldInput);
+        Console.WriteLine(JsonSerializer.Serialize(result, compactJsonOptions));
+        return 0;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or InvalidOperationException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, compactJsonOptions);
+    }
+}
+
+if (args is ["--evidence-preview" or "--evidence-write" or "--verify-evidence", var evidenceRequestPath] && !string.IsNullOrWhiteSpace(evidenceRequestPath))
+{
+    try
+    {
+        var input = JsonSerializer.Deserialize<CliEvidenceRequest>(await File.ReadAllTextAsync(evidenceRequestPath), jsonOptions)
+            ?? throw new InvalidDataException("Request JSON is empty.");
+        Require(input.CaseRoot, nameof(input.CaseRoot));
+        Require(input.Actor, nameof(input.Actor));
+        if (input.Inputs is null || input.Inputs.Count != 3) throw new InvalidDataException("Exactly three Evidence inputs are required.");
+        var caseRoot = Path.GetFullPath(input.CaseRoot);
+        var evidenceInputs = input.Inputs.Select(item => new CoreTreeEvidenceInput(item.InputId, item.InnovatorVersion,
+            ResolveCaseRelativePath(caseRoot, item.TreePath), ResolveCaseRelativePath(caseRoot, item.EvidencePath))).ToArray();
+        var command = new CoreTreeEvidenceCommand();
+        var previews = await Task.WhenAll(evidenceInputs.Select(item => command.PreviewAsync(item, input.Actor)));
+        if (args[0] is "--evidence-preview" or "--verify-evidence")
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new CliEvidenceResult("Preview", previews), jsonOptions));
+            return previews.All(result => result.Status == CoreTreeEvidenceSetStatus.CompleteCompatible) ? 0 : 2;
+        }
+        if (previews.Any(result => result.Status is CoreTreeEvidenceSetStatus.Partial or CoreTreeEvidenceSetStatus.StaleOrConflict or CoreTreeEvidenceSetStatus.Blocked))
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new CliEvidenceResult("Blocked", previews), jsonOptions));
+            return 2;
+        }
+        var writes = await Task.WhenAll(evidenceInputs.Select(item => command.WriteAsync(item, input.Actor)));
+        Console.WriteLine(JsonSerializer.Serialize(new CliEvidenceWriteBatchResult(writes.All(result => result.OperationStatus == CoreTreeEvidenceOperationStatus.Completed) ? "Completed" : "Failed", writes), jsonOptions));
+        return writes.All(result => result.OperationStatus == CoreTreeEvidenceOperationStatus.Completed) ? 0 : 1;
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException)
+    {
+        return await WriteFailureAsync("CliInputError", exception.Message, 1, jsonOptions);
+    }
 }
 
 if (args is ["--create-core-tree-case", var creationRequestPath] && !string.IsNullOrWhiteSpace(creationRequestPath))
@@ -126,7 +212,7 @@ if (args is ["--build-delivery", var deliveryRequestPath] && !string.IsNullOrWhi
 }
 
 if (args is not ["--preflight" or "--request", var requestPath] || string.IsNullOrWhiteSpace(requestPath))
-    return await WriteFailureAsync("CliArgumentError", "Expected --create-core-tree-case <request.json>, --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, --finalize-comparison <request.json>, or --build-delivery <request.json>. Use --help for usage.", 2, jsonOptions);
+    return await WriteFailureAsync("CliArgumentError", "Expected --validate-case-directory-scaffold <request.json>, --scaffold-case-directory <request.json>, --create-core-tree-case <request.json>, --preflight <request.json>, --request <request.json>, --approve-reviews <request.json>, --finalize-comparison <request.json>, or --build-delivery <request.json>. Use --help for usage.", 2, jsonOptions);
 
 try
 {
@@ -371,6 +457,10 @@ static async Task<int> WriteFailureAsync(string code, string message, int exitCo
 }
 
 public sealed record CliFailure(string Status, string Code, string Message);
+public sealed record CliEvidenceInput(string InputId, string InnovatorVersion, string TreePath, string EvidencePath);
+public sealed record CliEvidenceRequest(string CaseRoot, string Actor, IReadOnlyList<CliEvidenceInput> Inputs);
+public sealed record CliEvidenceResult(string Status, IReadOnlyList<CoreTreeEvidenceSetResult> Inputs);
+public sealed record CliEvidenceWriteBatchResult(string Status, IReadOnlyList<CoreTreeEvidenceWriteResult> Inputs);
 
 public sealed record CliCoreTreeCaseCreationRequest(
     string CaseRoot,

@@ -1,0 +1,15 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "actor": "BCO\\kenny",
+  "comparisonOutputRoot": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\attempts\\attempt-20260903-001",
+  "completionManifestPath": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\completions\\completion-20260903-001\\completion-manifest.json",
+  "deliveryOutputRoot": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\deliveries\\delivery-20260903-001",
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.build-delivery",
+      "actionVersion": "1",
+      "allowedTargetRoots": ["K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\deliveries"],
+      "requiredPrerequisites": ["case.loaded", "comparison.completed", "comparison.evidence.valid", "inputs.immutable", "manual.reviews.applied", "delivery.output.new"]
+    }
+  ]
+}

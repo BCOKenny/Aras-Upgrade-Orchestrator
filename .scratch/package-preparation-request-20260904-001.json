@@ -1,0 +1,12 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "preparationId": "preparation-20260904-001",
+  "customerPackageBaselineId": "customer-11sp9",
+  "customerPackageBaselineActualVersion": "11.0 SP9",
+  "actor": "kennychang6024\\codexsandboxoffline",
+  "hops": [
+    { "sourceVersion": "11.0 SP8", "targetVersion": "11.0 SP15" },
+    { "sourceVersion": "11.0 SP15", "targetVersion": "12.0 SP18" },
+    { "sourceVersion": "12.0 SP18", "targetVersion": "R38" }
+  ]
+}

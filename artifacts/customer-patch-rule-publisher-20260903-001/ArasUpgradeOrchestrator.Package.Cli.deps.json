@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "ArasUpgradeOrchestrator.Package.Cli/1.0.0": {
+        "dependencies": {
+          "ArasUpgradeOrchestrator.Core": "1.0.0"
+        },
+        "runtime": {
+          "ArasUpgradeOrchestrator.Package.Cli.dll": {}
+        }
+      },
+      "ArasUpgradeOrchestrator.Core/1.0.0": {
+        "runtime": {
+          "ArasUpgradeOrchestrator.Core.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ArasUpgradeOrchestrator.Package.Cli/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ArasUpgradeOrchestrator.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

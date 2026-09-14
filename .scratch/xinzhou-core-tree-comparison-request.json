@@ -1,0 +1,22 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "actor": "BCO\\kenny",
+  "sourceVersion": "11.0 SP9",
+  "targetVersion": "R38",
+  "outputRoot": "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\attempts\\attempt-20260914-001",
+  "serverRuleVersion": "server-text-1",
+  "serverRulePaths": [
+    "Server/method-config.xml"
+  ],
+  "safetyWhitelist": [
+    {
+      "actionId": "core-tree.compare",
+      "actionVersion": "1",
+      "allowedTargetRoots": [
+        "K:\\70.ArasUpgradeCases\\芯洲\\core-tree\\attempts"
+      ],
+      "requiredPrerequisites": []
+    }
+  ],
+  "useCaseCoreTreeInputs": true
+}

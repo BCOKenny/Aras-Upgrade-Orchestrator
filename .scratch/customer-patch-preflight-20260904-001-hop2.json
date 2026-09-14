@@ -1,0 +1,11 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "preparationId": "preparation-20260904-001",
+  "hopId": "11.0-sp15-to-12.0-sp18",
+  "source": { "role": "CustomerBaseline", "baselineId": "customer-11sp9", "actualVersion": "11.0 SP9", "inputRelativePath": "package-upgrade/preparation-20260904-001/customer-package-baseline/customer-11sp9/input" },
+  "target": { "role": "TargetPackage", "targetRelease": "12.0 SP18", "inputRelativePath": "package-upgrade/preparation-20260904-001/hops/11.0-sp15-to-12.0-sp18/customer-patch-comparison/patch-support-input" },
+  "evidenceRelativePath": "package-upgrade/preparation-20260904-001/hops/11.0-sp15-to-12.0-sp18/customer-patch-comparison/evidence",
+  "comparisonAttemptsRelativePath": "package-upgrade/preparation-20260904-001/hops/11.0-sp15-to-12.0-sp18/customer-patch-comparison/comparison-attempts",
+  "attemptId": "preflight-20260904-001-hop2",
+  "ruleStoreRoot": "K:\\70.ArasUpgradeCases\\芯洲\\rule-sets"
+}

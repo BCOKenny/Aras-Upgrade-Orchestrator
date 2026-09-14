@@ -1,7 +1,6 @@
 # 正式受測核心能力
 
-- `OotbHopDiffArtifactVerifier`：在任何 Solutions 寫入前驗證 Rule 1 ZIP、雙端內容、版本、規則快照與封裝 Checksum。
-- `AdaptedPackageBuilder`：先備份原始 Solutions，再建立來源／目的 XML 工作副本，逐 XML 隔離錯誤並固定證據。
+- `AdaptedPackageBuilder`：先備份原始 target Package，再建立 source XML 工作副本，逐 XML 隔離錯誤並直接更新配對的 target XML。
 - `Rule2AdaptationEngine`：依 Package CompareKey 遞迴 AML Item、Item Property、Relationships 與 Relationship Item；套用七步 Scalar 規則及 federated Property 例外。
 - `AdaptedPackageFinalizer`：只有零錯誤且零人工確認時，以 CreateNew 語意建立不可覆寫 `completion-manifest.json`。
 - `RuleSetResolver`：固定共同規則與版本例外、發布版本及有效 Checksum；衝突時阻擋。

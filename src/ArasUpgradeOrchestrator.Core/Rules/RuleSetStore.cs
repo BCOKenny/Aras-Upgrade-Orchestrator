@@ -34,10 +34,23 @@ public sealed class RuleSetStore
         Guid draftId,
         RulePublicationApproval approval,
         CancellationToken cancellationToken = default)
+        => await PublishAsync(draftId, approval, null, cancellationToken);
+
+    public async Task<PublishedRuleSet> PublishAsync(
+        Guid draftId,
+        RulePublicationApproval approval,
+        RuleExecutionAudit? executionAudit,
+        CancellationToken cancellationToken = default)
     {
         EnsureHuman(approval?.Actor, "發布規則版本");
         if (string.IsNullOrWhiteSpace(approval!.EvidenceReference))
             throw new InvalidOperationException("發布規則必須附人工核准證據。 ");
+        if (executionAudit is not null &&
+            (string.IsNullOrWhiteSpace(executionAudit.ApprovedBy) ||
+             string.IsNullOrWhiteSpace(executionAudit.ExecutedBy) ||
+             string.IsNullOrWhiteSpace(executionAudit.ApprovalReceiptReference) ||
+             string.IsNullOrWhiteSpace(executionAudit.RequestChecksum)))
+            throw new InvalidOperationException("規則發布執行稽核資料不可缺少欄位。 ");
         var draft = await ReadDraftAsync(draftId, cancellationToken);
         var validation = RuleSetValidator.Validate(draft);
         if (!validation.IsValid)
@@ -49,7 +62,7 @@ public sealed class RuleSetStore
         {
             var existing = await ListPublishedAsync(cancellationToken);
             var nextVersion = existing.Where(item => item.RuleSetId == draft.RuleSetId).Select(item => item.Version).DefaultIfEmpty(0).Max() + 1;
-            var published = PublishedRuleSet.Create(draft, nextVersion, _clock(), approval.Actor.Name, approval.EvidenceReference);
+            var published = PublishedRuleSet.Create(draft, nextVersion, _clock(), approval.Actor.Name, approval.EvidenceReference, executionAudit);
             var directory = Path.Combine(PublishedDirectory, draft.RuleSetId.ToString("N"));
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, $"{nextVersion:D8}.json");

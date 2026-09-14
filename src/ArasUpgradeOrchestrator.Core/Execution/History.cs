@@ -19,6 +19,13 @@ public static class HistoryEventTypes
     public const string CoreTreeManualReviewsApproved = "core-tree.manual-reviews.approved";
     public const string CoreTreeComparisonCompleted = "core-tree.comparison.completed";
     public const string CoreTreeDeliveryCompleted = "core-tree.delivery.completed";
+    public const string Rule1PreparationStarted = "package.rule1-preparation.started";
+    public const string Rule1PreparationRegistered = "package.rule1-preparation.registered";
+    public const string Rule1PreparationDraft = "package.rule1-preparation.draft";
+    public const string Rule1PreparationPendingVerification = "package.rule1-preparation.pending-verification";
+    public const string Rule1AvailabilityConfirmationBlocked = "package.rule1-availability-confirmation.blocked";
+    public const string Rule1AvailabilityConfirmationCompleted = "package.rule1-availability-confirmation.completed";
+    public const string CustomerPatchEvidenceRecorded = "package.customer-patch-comparison.evidence-recorded";
 }
 
 public sealed record HistoryEntry(

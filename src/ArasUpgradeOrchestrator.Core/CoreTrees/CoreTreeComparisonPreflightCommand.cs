@@ -75,9 +75,9 @@ public sealed class CoreTreeComparisonPreflightCommand
             return Blocked(Guid.Empty, issues, expectedLeasePath, expectedAttemptPath, exception.Message);
         }
 
-        var customer = InspectInput(request.Customer, issues, "customer");
-        var sourceOotb = InspectInput(request.SourceOotb, issues, "source-ootb");
-        var targetOotb = InspectInput(request.TargetOotb, issues, "target-ootb");
+        var customer = await InspectInputAsync(request.Customer, issues, "customer", cancellationToken);
+        var sourceOotb = await InspectInputAsync(request.SourceOotb, issues, "source-ootb", cancellationToken);
+        var targetOotb = await InspectInputAsync(request.TargetOotb, issues, "target-ootb", cancellationToken);
 
         ValidateVersions(manifest, request, issues);
         ValidateInputRoots(request, issues);
@@ -137,10 +137,11 @@ public sealed class CoreTreeComparisonPreflightCommand
 
     private static readonly CoreTreePreflightInput EmptyInput = new(false, false, 0, 0);
 
-    private static CoreTreePreflightInput InspectInput(
+    private static async Task<CoreTreePreflightInput> InspectInputAsync(
         CoreTreeInputEvidence input,
         List<CoreTreePreflightIssue> issues,
-        string role)
+        string role,
+        CancellationToken cancellationToken)
     {
         if (input is null)
         {
@@ -150,7 +151,7 @@ public sealed class CoreTreeComparisonPreflightCommand
         if (string.IsNullOrWhiteSpace(input.EvidenceReference))
             issues.Add(new CoreTreePreflightIssue($"input.{role}.evidence.missing", "Core Tree evidence reference is required."));
         else
-            InspectEvidence(input.EvidenceReference, issues, role);
+            await InspectEvidenceAsync(input, issues, role, cancellationToken);
 
         var root = GetFullPathOrEmpty(input.RootPath, issues, $"input.{role}.path.invalid");
         if (string.IsNullOrEmpty(root)) return EmptyInput;
@@ -169,9 +170,9 @@ public sealed class CoreTreeComparisonPreflightCommand
             CountFiles(serverPath, serverExists, issues, role, "server"));
     }
 
-    private static void InspectEvidence(string evidenceReference, List<CoreTreePreflightIssue> issues, string role)
+    private static async Task InspectEvidenceAsync(CoreTreeInputEvidence input, List<CoreTreePreflightIssue> issues, string role, CancellationToken cancellationToken)
     {
-        var evidencePath = GetFullPathOrEmpty(evidenceReference, issues, $"input.{role}.evidence.path.invalid");
+        var evidencePath = GetFullPathOrEmpty(input.EvidenceReference, issues, $"input.{role}.evidence.path.invalid");
         if (string.IsNullOrEmpty(evidencePath)) return;
 
         if (!Directory.Exists(evidencePath))
@@ -182,13 +183,11 @@ public sealed class CoreTreeComparisonPreflightCommand
 
         try
         {
-            var files = Directory.EnumerateFiles(evidencePath, "*", SearchOption.AllDirectories)
-                .Select(path => Path.GetFileName(path) ?? string.Empty)
-                .ToArray();
-            var hasVersionPrimary = files.Any(file => file.StartsWith("version-primary.", StringComparison.OrdinalIgnoreCase));
-            var hasIntegrityRecord = files.Any(file => file.StartsWith("integrity.", StringComparison.OrdinalIgnoreCase));
-            if (!hasVersionPrimary || !hasIntegrityRecord)
-                issues.Add(new CoreTreePreflightIssue($"input.{role}.evidence.incomplete", "Evidence requires both a version-primary record and an integrity record."));
+            var result = await new CoreTreeEvidenceCommand().PreviewAsync(
+                new CoreTreeEvidenceInput(string.Empty, input.InnovatorVersion, input.RootPath, evidencePath),
+                "preflight", cancellationToken);
+            if (result.Status != CoreTreeEvidenceSetStatus.CompleteCompatible)
+                issues.Add(new CoreTreePreflightIssue($"input.{role}.evidence.incomplete", result.Message ?? result.Status.ToString()));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using ArasUpgradeOrchestrator.Core.Aml;
 using ArasUpgradeOrchestrator.Core.Cases;
@@ -16,6 +17,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("任務圖區分 Package 子任務與依序跳點執行", TaskGraphBuildsDependencies),
     ("案件清單可建立及驗證讀回", CaseManifestRoundTrips),
     ("Core Tree 工作流案件可無 Package DB 路徑建立及讀回", CoreTreeWorkflowCaseRoundTripsWithoutRoute),
+    ("Package 比較計畫可獨立登錄且不改變既有 Core Tree 工作流", PackageComparisonPreparationIsIndependentOfCoreTree),
+    ("受控 Rule 1 登錄 command 只新增比較計畫與歷程", Rule1PreparationRegistrationCommandAddsPlanOnly),
+    ("Package 比較計畫拒絕重複識別與不安全路徑", PackageComparisonPreparationRejectsUnsafeOrDuplicateEntries),
     ("既有升級路徑只能追加新版不能改寫", ExistingRouteCannotBeRewritten),
     ("歷程只追加且更正保留原事件", HistoryIsAppendOnly),
     ("失敗後無安全證據不得重試", RetryRequiresEvidence),
@@ -45,6 +49,22 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("AML 語意相等忽略格式 Attribute 與 Relationship 順序", AmlSemanticEqualityIgnoresPureFormatting)
     ,("AML 語意比較將重複 Scalar Property 轉人工確認", AmlSemanticEqualityBlocksAmbiguousScalarProperties)
     ,("預設 Rule 2 規則集包含可驗證的七個步驟", DefaultRule2DraftContainsValidatedSteps)
+    ,("Customer-Patch 比較 Policy 僅接受固定保留步驟", CustomerPatchComparisonPolicyRetainsItemsOnly)
+    ,("Customer-Patch 證據登錄固定輸入摘要與具名人工時間", CustomerPatchEvidenceRegistrationRecordsImmutableEvidence)
+    ,("Customer-Patch 證據來源必須等於案件內輸入相對路徑", CustomerPatchEvidenceRegistrationRejectsManualSourceText)
+    ,("Customer-Patch preflight 驗證證據且零寫入", CustomerPatchPreflightVerifiesEvidenceWithoutMutation)
+    ,("Customer-Patch scaffold 建立可解析 plan 與 evidence request", CustomerPatchPreparationScaffoldCreatesParseableOutputs)
+    ,("Customer-Patch scaffold 拒絕缺少實際版本與重複跳點", CustomerPatchPreparationScaffoldRejectsInvalidRequest)
+    ,("Customer-Patch scaffold 拒絕既有 preparation 目錄", CustomerPatchPreparationScaffoldRejectsExistingPreparation)
+    ,("Package CLI 以 UTF-8 request 建立 Customer-Patch scaffold", PackageCliScaffoldsCustomerPatchPreparation)
+    ,("Customer-Patch 規則發布 preflight 驗證機器核准收據", CustomerPatchPublicationPreflightVerifiesApprovalReceipt)
+    ,("Customer-Patch 規則發布 preflight 相容既有核准證據收據欄位", CustomerPatchPublicationPreflightAcceptsApprovalEvidenceReceipt)
+    ,("Customer-Patch 規則發布準備 CLI 建立核准資料且不發布規則", CustomerPatchRulePublicationPreparationCreatesApprovalArtifacts)
+    ,("Package CLI 執行 Customer-Patch 規則發布準備", PackageCliPreparesCustomerPatchRulePublication)
+    ,("Package CLI 以人工核准發布 Customer-Patch 共用規則且拒絕重複", CustomerPatchCommonRulePublicationCliPublishesOnce)
+    ,("Codex 受控發布拒絕核准人不一致且零寫入", CustomerPatchCodexExecutionRejectsApprovalActorMismatchWithoutWrites)
+    ,("Codex 受控發布保存不可變執行稽核", CustomerPatchCodexExecutionPersistsExecutionAudit)
+    ,("Package CLI Codex 受控發布拒絕偽造執行者並保存稽核", CustomerPatchCodexExecutionCliEnforcesRequestBoundary)
     ,("規則草稿拒絕重複順序與不支援步驟", RuleDraftValidationRejectsAmbiguity)
     ,("AI 不得建立或發布規則版本", AiCannotCreateOrPublishRules)
     ,("規則發布只追加不可覆寫版本", PublishedRuleVersionsAreImmutable)
@@ -64,15 +84,19 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("OOTB 跳點差異固定共同規則與版本例外的解析快照", OotbHopDiffPinsResolvedRuleSnapshot)
     ,("OOTB 跳點差異封裝缺少處理摘要時不得重用", OotbHopDiffVerifierRequiresSummary)
     ,("OOTB 跳點差異封裝含路徑逸出項目時不得重用", OotbHopDiffVerifierRejectsUnsafeEntries)
+    ,("Package 輸入樹狀雜湊可重現且偵測任何檔案異動", PackageInputTreeDigestDetectsChanges)
+    ,("Rule 1 預先比較 receipt 僅能標示待確認且不可覆寫", Rule1PreparationReceiptIsPendingAndImmutable)
+    ,("Rule 1 預先比較 command 不依賴升級路徑或 DB 並建立待確認 receipt", Rule1PreparationCommandRunsWithoutRouteOrDb)
+    ,("Rule 1 預先比較不需事先登錄 Package 比較計畫", Rule1PreparationCommandRunsWithoutRegistration)
     ,("Rule 2 依七步規則更新直接 Scalar 且不修改 Item Attribute", Rule2AppliesSevenScalarSteps)
     ,("Rule 2 遞迴處理 Relationship 並轉換 federated Property", Rule2RecursesAndCopiesFederatedProperty)
     ,("Rule 2 遇到重複 Scalar 時局部繼續但整體阻擋", Rule2AmbiguousScalarRequiresManualReview)
-    ,("正式適配 Package 先驗證差異包與備份再建立雙端工作副本", AdaptedPackagePreparesAfterVerificationAndBackup)
+    ,("正式適配 Package 先備份 target，再建立 source 工作副本並直接更新 target", AdaptedPackagePreparesAfterVerificationAndBackup)
     ,("Solutions 備份失敗時 Rule 2 不得寫入任何工作副本", AdaptedPackageBackupFailurePreservesSolutions)
     ,("正式適配 Package Skill 引用受測核心與備份關卡", AdaptedPackageSkillReferencesTestedCore)
-    ,("Package 整合拒絕將已驗證差異包套用到不同跳點", PackageIntegrationRejectsHopIdentityMismatch)
-    ,("Package 整合由一次性基準串接 Rule 1 與 Rule 2 完成正式適配", PackageIntegrationCompletesEndToEnd)
-    ,("Package 整合在 Rule 1 封裝遭竄改時保持 Solutions 零寫入", PackageIntegrationRejectsTamperedArtifactBeforeWrite)
+    ,("Package 整合拒絕與 source 或 target 重疊的執行目錄", PackageIntegrationRejectsOverlappingInputDirectory)
+    ,("Package 整合由一次性基準直接完成 Rule 2 適配", PackageIntegrationCompletesDirectRule2)
+    ,("直接 Rule 2 不需要 Rule 1 封裝且先備份 target", DirectRule2DoesNotRequireHopArtifact)
     ,("Package 整合在 Rule 2 人工確認未解除時阻擋正式完成", PackageIntegrationBlocksFinalizationForManualReview)
     ,("Core Tree 必須驗證三份版本證據與 Client Server 結構", CoreTreeValidatesInputs)
     ,("Core Tree Client 文字比較只忽略換行與 BOM", CoreTreeClientTextComparisonFollowsRules)
@@ -85,6 +109,18 @@ var tests = new (string Name, Func<Task> Run)[]
     ,("Core Tree 人工確認只能產生 Incomplete 且不得覆寫", CoreTreeBuilderBlocksIncompleteAndOverwrite)
     ,("Core Tree Skill 引用正式核心並守住完成與外部邊界", CoreTreeSkillReferencesTestedCore)
     ,("Core Tree execution Skill contract", CoreTreeRunSkillReferencesExecutionBoundary)
+    ,("Core Tree Evidence command 驗證 Missing、相容與 stale 狀態", CoreTreeEvidenceCommandClassifiesEvidenceStates)
+    ,("Core Tree Evidence 寫入先完整預檢並區分建立與重用", CoreTreeEvidenceWriteUsesAtomicPreflightContract)
+    ,("Customer-Patch Prompt 與 Rule 1 舊流程強制分流", CustomerPatchPromptSeparatesRule1Routing)
+    ,("Customer-Patch 證據 request 使用 CLI 頂層 source 與 target", CustomerPatchEvidenceRequestPromptUsesTopLevelSides)
+    ,("Customer-Patch 舊 request 修復先備份且不得直接登錄 evidence", CustomerPatchLegacyRequestRepairRequiresBackupAndSeparateRecording)
+    ,("Package 骨架 Prompt 固定案件根目錄相對路徑與 Unicode 重建", PackageScaffoldPromptUsesCaseRelativePathsAndCorrectUnicode)
+    ,("案件目錄骨架 Validate 保持零寫入且支援 Unicode 名稱", CaseDirectoryScaffoldValidateIsZeroWriteAndUnicodeSafe)
+    ,("案件目錄骨架拒絕不安全 request 且保持零寫入", CaseDirectoryScaffoldRejectsUnsafeRequestsWithoutWrites)
+    ,("案件目錄骨架範本不寫入真實案件資料", CaseDirectoryScaffoldTemplatesContainOnlyPlaceholders)
+    ,("案件目錄骨架 Apply 僅建立非正式產出", CaseDirectoryScaffoldApplyCreatesOnlyNonFormalArtifacts)
+    ,("Core Tree CLI Validate 案件骨架保持零寫入", CoreTreeCliValidatesCaseDirectoryScaffoldWithoutMutation)
+    ,("Core Tree CLI 以 UTF-8 request 建立案件骨架", CoreTreeCliCreatesCaseDirectoryScaffoldFromUtf8Request)
     ,("Core Tree command 協調案件、快照、鎖、Builder 與歷程", CoreTreeCommandCoordinatesCase)
     ,("Core Tree command 將 Incomplete 寫入歷程並以新目錄重試", CoreTreeCommandRecordsIncompleteAndAllowsFreshRetry)
     ,("Core Tree command 未通過 SafetyPolicy 時阻擋且不建立嘗試", CoreTreeCommandBlocksUnsafeAction)
@@ -253,6 +289,157 @@ static async Task CoreTreeWorkflowCaseRoundTripsWithoutRoute()
     Assert.Equal(0, loaded.Routes.Count);
     Assert.Equal(definition.ComparisonName, loaded.CoreTreeComparison!.ComparisonName);
     Assert.Throws<InvalidOperationException>(() => _ = loaded.CurrentRoute);
+}
+
+static async Task PackageComparisonPreparationIsIndependentOfCoreTree()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition(
+        "customer", "source", "target",
+        "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence",
+        "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var preparation = new PackageComparisonPreparation(
+        "11sp8-to-11sp15", "11SP8", "11SP15",
+        "package/hops/11sp8-to-11sp15/ootb-source-solutions",
+        "package/hops/11sp8-to-11sp15/ootb-target-solutions",
+        "package/hops/11sp8-to-11sp15/patch-support-input",
+        "package/hops/11sp8-to-11sp15/rule1-attempts", DateTimeOffset.UtcNow, "operator");
+
+    await store.AddPackageComparisonPreparationAsync(preparation);
+    var loaded = await store.LoadAsync();
+
+    Assert.Equal(0, loaded.Routes.Count);
+    Assert.Equal(definition, loaded.CoreTreeComparison);
+    Assert.Equal(1, loaded.PackageComparisonPreparations.Count);
+    Assert.Equal(preparation, loaded.PackageComparisonPreparations.Single());
+}
+
+static async Task PackageComparisonPreparationRejectsUnsafeOrDuplicateEntries()
+{
+    await using var scope = TestScope.Create();
+    var store = new CaseStore(scope.CaseRoot);
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var valid = new PackageComparisonPreparation("hop-a", "11SP8", "11SP15", "package/a/source", "package/a/target", "package/a/patch", "package/a/attempts", DateTimeOffset.UtcNow, "operator");
+    await store.AddPackageComparisonPreparationAsync(valid);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => store.AddPackageComparisonPreparationAsync(valid));
+    var unsafePath = valid with { PreparationId = "hop-b", OotbSourceSolutionsRelativePath = "../outside" };
+    await Assert.ThrowsAsync<InvalidDataException>(() => store.AddPackageComparisonPreparationAsync(unsafePath));
+}
+
+static async Task Rule1PreparationRegistrationCommandAddsPlanOnly()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var entry = new PackageComparisonPreparation("hop-a", "11SP8", "11SP15", "package/hop-a/source", "package/hop-a/target", "package/hop-a/patch", "package/hop-a/attempts", DateTimeOffset.UtcNow, "operator");
+    var policy = new SafetyPolicy([new SafetyWhitelistEntry(Rule1PreparationRegistrationCommand.ActionId, Rule1PreparationRegistrationCommand.ActionVersion, [scope.CaseRoot], new HashSet<string>(["case.loaded", "preparation.valid"]))]);
+
+    var registeredAt = DateTimeOffset.Parse("2026-09-02T08:00:00Z");
+    await new Rule1PreparationRegistrationCommand(policy, () => registeredAt).ExecuteAsync(new(scope.CaseRoot, "operator", entry));
+
+    var registered = (await store.LoadAsync()).PackageComparisonPreparations.Single();
+    Assert.Equal(registeredAt, registered.CreatedAt);
+    Assert.Equal("operator", registered.CreatedBy);
+    var history = await ReadAll(new AppendOnlyHistoryStore(store.ToolDataPath));
+    Assert.True(history.Any(item => item.EventType == HistoryEventTypes.Rule1PreparationRegistered));
+}
+
+static async Task PackageInputTreeDigestDetectsChanges()
+{
+    await using var scope = TestScope.Create();
+    var root = Path.Combine(scope.Root, "digest-input");
+    Directory.CreateDirectory(root);
+    await File.WriteAllTextAsync(Path.Combine(root, "one.xml"), "<AML />");
+    var first = await PackageInputTreeDigest.ComputeAsync(root);
+    var second = await PackageInputTreeDigest.ComputeAsync(root);
+    await File.WriteAllTextAsync(Path.Combine(root, "one.xml"), "<AML><Item /></AML>");
+    var changed = await PackageInputTreeDigest.ComputeAsync(root);
+
+    Assert.Equal(first.TreeChecksum, second.TreeChecksum);
+    Assert.NotEqual(first.TreeChecksum, changed.TreeChecksum);
+    Assert.Equal(1, changed.FileCount);
+}
+
+static async Task Rule1PreparationReceiptIsPendingAndImmutable()
+{
+    await using var scope = TestScope.Create();
+    var source = Path.Combine(scope.Root, "source");
+    var target = Path.Combine(scope.Root, "target");
+    var patch = Path.Combine(scope.Root, "patch");
+    foreach (var path in new[] { source, target, patch }) Directory.CreateDirectory(path);
+    await File.WriteAllTextAsync(Path.Combine(source, "a.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(target, "a.xml"), "<AML />");
+    var output = Path.Combine(scope.Root, "attempt");
+    var receipt = new Rule1PreparationReceipt(
+        Guid.NewGuid(), "hop-a", "attempt-a", "11SP8", "11SP15", Rule1PreparationStatus.PendingVerification,
+        new Rule1PreparationRuleSnapshot(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow).Steps, null, null, null),
+        await PackageInputTreeDigest.ComputeAsync(source), await PackageInputTreeDigest.ComputeAsync(target), await PackageInputTreeDigest.ComputeAsync(patch),
+        new OotbHopDiffSummary(0, 0, 0, 0, 0, 0, 0), [], [], DateTimeOffset.UtcNow, "operator");
+
+    await Rule1PreparationReceiptStore.WriteAsync(output, receipt);
+    var loaded = await Rule1PreparationReceiptStore.LoadAsync(output);
+
+    Assert.Equal(Rule1PreparationStatus.PendingVerification, loaded.Status);
+    Assert.False(File.Exists(Path.Combine(output, "completion-manifest.json")));
+    await Assert.ThrowsAsync<InvalidOperationException>(() => Rule1PreparationReceiptStore.WriteAsync(output, receipt));
+}
+
+static async Task Rule1PreparationCommandRunsWithoutRouteOrDb()
+{
+    await using var scope = TestScope.Create();
+    var preparation = new PackageComparisonPreparation(
+        "hop-a", "11SP8", "11SP15", "package/hop-a/source", "package/hop-a/target", "package/hop-a/patch", "package/hop-a/rule1-attempts", DateTimeOffset.UtcNow, "operator");
+    foreach (var relative in new[] { preparation.OotbSourceSolutionsRelativePath, preparation.OotbTargetSolutionsRelativePath, preparation.PatchSupportInputRelativePath })
+        Directory.CreateDirectory(Path.Combine(scope.CaseRoot, relative));
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, preparation.OotbSourceSolutionsRelativePath, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, preparation.OotbTargetSolutionsRelativePath, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name></Item></AML>");
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    await store.AddPackageComparisonPreparationAsync(preparation);
+    var rule = Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 1);
+    var resolution = ResolvedRule1(rule, "11SP8", "11SP15");
+    var attemptsRoot = Path.Combine(scope.CaseRoot, preparation.PreparationAttemptRelativePath);
+    var policy = new SafetyPolicy([new SafetyWhitelistEntry(Rule1PreparationCommand.ActionId, Rule1PreparationCommand.ActionVersion, [attemptsRoot], new HashSet<string>(["case.loaded", "inputs.valid", "rules.resolved"]))]);
+
+    var result = await new Rule1PreparationCommand(policy).ExecuteAsync(new Rule1PreparationCommandRequest(
+        scope.CaseRoot, preparation.PreparationId, "attempt-001", "operator", resolution));
+
+    Assert.Equal(Rule1PreparationStatus.PendingVerification, result.Status);
+    Assert.True(File.Exists(Path.Combine(result.AttemptRoot, Rule1PreparationReceiptStore.ManifestFileName)));
+    Assert.False(File.Exists(Path.Combine(result.AttemptRoot, "completion-manifest.json")));
+    var history = await ReadAll(new AppendOnlyHistoryStore(store.ToolDataPath));
+    Assert.True(history.Any(entry => entry.EventType == HistoryEventTypes.Rule1PreparationPendingVerification));
+}
+
+static async Task Rule1PreparationCommandRunsWithoutRegistration()
+{
+    await using var scope = TestScope.Create();
+    var preparation = new PackageComparisonPreparation(
+        "hop-direct", "11SP8", "11SP15", "package/hop-direct/source", "package/hop-direct/target", "package/hop-direct/patch", "package/hop-direct/rule1-attempts", DateTimeOffset.MinValue, "operator");
+    foreach (var relative in new[] { preparation.OotbSourceSolutionsRelativePath, preparation.OotbTargetSolutionsRelativePath, preparation.PatchSupportInputRelativePath })
+        Directory.CreateDirectory(Path.Combine(scope.CaseRoot, relative));
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, preparation.OotbSourceSolutionsRelativePath, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name></Item></AML>");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, preparation.OotbTargetSolutionsRelativePath, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name></Item></AML>");
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var rule = Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 1);
+    var resolution = ResolvedRule1(rule, "11SP8", "11SP15");
+    var attemptsRoot = Path.Combine(scope.CaseRoot, preparation.PreparationAttemptRelativePath);
+    var policy = new SafetyPolicy([new SafetyWhitelistEntry(Rule1PreparationCommand.ActionId, Rule1PreparationCommand.ActionVersion, [attemptsRoot], new HashSet<string>(["case.loaded", "inputs.valid", "rules.resolved"]))]);
+
+    var result = await new Rule1PreparationCommand(policy).ExecuteAsync(new Rule1PreparationCommandRequest(
+        scope.CaseRoot, preparation.PreparationId, "attempt-001", "operator", resolution, DirectPreparation: preparation));
+
+    Assert.Equal(Rule1PreparationStatus.PendingVerification, result.Status);
+    Assert.True(File.Exists(Path.Combine(result.AttemptRoot, Rule1PreparationReceiptStore.ManifestFileName)));
+    Assert.Equal(0, (await store.LoadAsync()).PackageComparisonPreparations.Count);
 }
 
 static async Task IncompleteRetryRequiresVerifiedIdempotency()
@@ -1231,29 +1418,26 @@ static RuleSetResolutionResult ResolvedRule2()
 static async Task AdaptedPackagePreparesAfterVerificationAndBackup()
 {
     await using var scope = TestScope.Create();
-    var build = await CreateReadyHopDiffAsync(scope.Root);
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
     var baseline = Path.Combine(scope.Root, "baseline");
     var solutions = Path.Combine(scope.Root, "Support", "Solutions");
     Directory.CreateDirectory(baseline);
     Directory.CreateDirectory(solutions);
     await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"),
-        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>customer</name></Item></AML>");
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>customer</name><description>customer</description></Item></AML>");
     await File.WriteAllTextAsync(Path.Combine(baseline, "source.bin"), "source-binary");
-    await File.WriteAllTextAsync(Path.Combine(solutions, "old.xml"), "<AML />");
+    await File.WriteAllTextAsync(Path.Combine(solutions, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>target</name></Item></AML>");
     await File.WriteAllTextAsync(Path.Combine(solutions, "keep.bin"), "target-binary");
-    var request = new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18", baseline, solutions,
-        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
-        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
-            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-12sp9", "12SP9", baseline), new Rule2ComparisonTarget("12SP18", solutions),
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), ResolvedRule2(), DateTimeOffset.UtcNow);
 
     var result = await AdaptedPackageBuilder.BuildAsync(request);
 
     Assert.Equal(AdaptedPackageStatus.ReadyForFinalization, result.Status);
     Assert.True(Directory.Exists(result.SolutionsBackupRoot));
-    Assert.True(File.Exists(Path.Combine(result.SolutionsBackupRoot, "old.xml")));
-    Assert.False(File.Exists(Path.Combine(solutions, "old.xml")));
+    Assert.True(File.Exists(Path.Combine(result.SolutionsBackupRoot, "paired.xml")));
+    Assert.Equal("<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>target</name><description>customer</description></Item></AML>",
+        await File.ReadAllTextAsync(Path.Combine(solutions, "paired.xml")));
     Assert.Equal("target-binary", await File.ReadAllTextAsync(Path.Combine(solutions, "keep.bin")));
     Assert.False(File.Exists(Path.Combine(result.SourceWorkRoot, "source.bin")));
     Assert.True(File.Exists(Path.Combine(result.SourceWorkRoot, "paired.xml")));
@@ -1266,9 +1450,6 @@ static async Task AdaptedPackagePreparesAfterVerificationAndBackup()
 static async Task AdaptedPackageBackupFailurePreservesSolutions()
 {
     await using var scope = TestScope.Create();
-    var build = await CreateReadyHopDiffAsync(scope.Root);
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
     var baseline = Path.Combine(scope.Root, "baseline");
     var solutions = Path.Combine(scope.Root, "Solutions");
     Directory.CreateDirectory(baseline);
@@ -1278,10 +1459,8 @@ static async Task AdaptedPackageBackupFailurePreservesSolutions()
     await File.WriteAllTextAsync(originalPath, "<AML />");
     var invalidBackupRoot = Path.Combine(scope.Root, "backup-file");
     await File.WriteAllTextAsync(invalidBackupRoot, "not-a-directory");
-    var request = new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18", baseline, solutions,
-        invalidBackupRoot, Path.Combine(scope.Root, "attempt"), archivePath,
-        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
-            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-12sp9", "12SP9", baseline), new Rule2ComparisonTarget("12SP18", solutions),
+        invalidBackupRoot, Path.Combine(scope.Root, "attempt"), ResolvedRule2(), DateTimeOffset.UtcNow);
 
     await Assert.ThrowsAsync<IOException>(() => AdaptedPackageBuilder.BuildAsync(request));
     Assert.True(File.Exists(originalPath));
@@ -1295,7 +1474,7 @@ static Task AdaptedPackageSkillReferencesTestedCore()
     var capabilities = File.ReadAllText(Path.Combine(skillRoot, "references", "core-capabilities.md"));
     AssertSkillFrontmatter(skill, "aras-prepare-adapted-package");
     AssertAgentMetadata(Path.Combine(skillRoot, "agents", "openai.yaml"), "aras-prepare-adapted-package");
-    foreach (var typeName in new[] { "Rule2AdaptationEngine", "AdaptedPackageBuilder", "AdaptedPackageFinalizer", "OotbHopDiffArtifactVerifier" })
+    foreach (var typeName in new[] { "Rule2AdaptationEngine", "AdaptedPackageBuilder", "AdaptedPackageFinalizer" })
         Assert.True(capabilities.Contains($"`{typeName}`", StringComparison.Ordinal), $"正式適配 Package 核心能力對照缺少 {typeName}。 ");
     Assert.True(skill.Contains("備份失敗時不得寫入工作副本", StringComparison.Ordinal));
     Assert.True(skill.Contains("不得把 Item Property 當 Scalar", StringComparison.Ordinal));
@@ -1303,12 +1482,9 @@ static Task AdaptedPackageSkillReferencesTestedCore()
     return Task.CompletedTask;
 }
 
-static async Task PackageIntegrationRejectsHopIdentityMismatch()
+static async Task PackageIntegrationRejectsOverlappingInputDirectory()
 {
     await using var scope = TestScope.Create();
-    var build = await CreateReadyHopDiffAsync(scope.Root);
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
     var baseline = Path.Combine(scope.Root, "baseline");
     var solutions = Path.Combine(scope.Root, "Solutions");
     Directory.CreateDirectory(baseline);
@@ -1317,10 +1493,8 @@ static async Task PackageIntegrationRejectsHopIdentityMismatch()
         "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>customer</name></Item></AML>");
     var original = Path.Combine(solutions, "original.xml");
     await File.WriteAllTextAsync(original, "<AML />");
-    var request = new AdaptedPackageRequest(Guid.NewGuid(), "11SP5", "R38", baseline, solutions,
-        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
-        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
-            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-11sp5", "11SP5", baseline), new Rule2ComparisonTarget("R38", solutions),
+        Path.Combine(scope.Root, "backups"), Path.Combine(solutions, "attempt"), ResolvedRule2(), DateTimeOffset.UtcNow);
 
     await Assert.ThrowsAsync<InvalidOperationException>(() => AdaptedPackageBuilder.BuildAsync(request));
     Assert.True(File.Exists(original));
@@ -1328,7 +1502,7 @@ static async Task PackageIntegrationRejectsHopIdentityMismatch()
     Assert.False(Directory.Exists(request.AttemptRoot));
 }
 
-static async Task PackageIntegrationCompletesEndToEnd()
+static async Task PackageIntegrationCompletesDirectRule2()
 {
     await using var scope = TestScope.Create();
     var history = new AppendOnlyHistoryStore(scope.ToolDataRoot);
@@ -1337,21 +1511,6 @@ static async Task PackageIntegrationCompletesEndToEnd()
     await flow.LockAsync(TestPackageLockRequest(flowAttemptId, Path.Combine(scope.Root, "rehearsal-db")), "operator");
     var flowResult = await flow.CompleteAsync(flowAttemptId, "baseline-evidence", [], "operator");
     Assert.Equal(CustomerPackageFlowState.Completed, flowResult.State);
-
-    var ootbSource = Path.Combine(scope.Root, "ootb-source");
-    var ootbTarget = Path.Combine(scope.Root, "ootb-target");
-    Directory.CreateDirectory(ootbSource);
-    Directory.CreateDirectory(ootbTarget);
-    const string sourceOotb = "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>old</name><label>Old</label></Item></AML>";
-    const string targetOotb = "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><name>new</name><label>New</label></Item></AML>";
-    await File.WriteAllTextAsync(Path.Combine(ootbSource, "nested.xml"), sourceOotb);
-    await File.WriteAllTextAsync(Path.Combine(ootbTarget, "nested.xml"), targetOotb);
-    var rule1 = Published(DefaultUpgradeRuleSets.CreateRule1Draft("operator", DateTimeOffset.UtcNow), 3);
-    var rule1Resolution = ResolvedRule1(rule1, "12SP9", "12SP18");
-    var diff = await OotbHopDiffBuilder.BuildAsync(new OotbHopDiffRequest(Guid.NewGuid(), "12SP9", "12SP18",
-        ootbSource, ootbTarget, Path.Combine(scope.Root, "rule1-output"), rule1Resolution, DateTimeOffset.UtcNow));
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(diff, archivePath, DateTimeOffset.UtcNow);
 
     var baseline = Path.Combine(scope.Root, "customer-baseline");
     var solutions = Path.Combine(scope.Root, "Support", "Solutions");
@@ -1363,16 +1522,12 @@ static async Task PackageIntegrationCompletesEndToEnd()
     await File.WriteAllTextAsync(Path.Combine(solutions, "original.xml"), "<AML />");
     await File.WriteAllTextAsync(Path.Combine(solutions, "upgrade.bin"), "upgrade-binary");
     var rule2 = ResolvedRule2();
-    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), "12SP9", "12SP18",
-        baseline, solutions, Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "rule2-attempt"), archivePath,
-        new OotbHopDiffReuseRequirement("12SP9", "12SP18", diff.RuleSets, diff.EffectiveRuleChecksum,
-            artifact.ArchiveChecksum!), rule2, DateTimeOffset.UtcNow));
+    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-12sp9", "12SP9", baseline), new Rule2ComparisonTarget("12SP18", solutions),
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "rule2-attempt"), rule2, DateTimeOffset.UtcNow));
     var completed = await AdaptedPackageFinalizer.FinalizeAsync(adapted, Path.Combine(scope.Root, "completion"), DateTimeOffset.UtcNow);
 
     Assert.Equal(AdaptedPackageStatus.Completed, completed.Status);
     Assert.Equal(customerXml, await File.ReadAllTextAsync(Path.Combine(baseline, "nested.xml")));
-    Assert.Equal(sourceOotb, await File.ReadAllTextAsync(Path.Combine(ootbSource, "nested.xml")));
-    Assert.Equal(targetOotb, await File.ReadAllTextAsync(Path.Combine(ootbTarget, "nested.xml")));
     Assert.Equal("upgrade-binary", await File.ReadAllTextAsync(Path.Combine(solutions, "upgrade.bin")));
     Assert.False(File.Exists(Path.Combine(completed.SourceWorkRoot, "customer.bin")));
     Assert.SequenceEqual(rule2.PinnedVersions, completed.Rule2RuleSets);
@@ -1380,13 +1535,9 @@ static async Task PackageIntegrationCompletesEndToEnd()
     Assert.True(File.Exists(completed.CompletionManifestPath));
 }
 
-static async Task PackageIntegrationRejectsTamperedArtifactBeforeWrite()
+static async Task DirectRule2DoesNotRequireHopArtifact()
 {
     await using var scope = TestScope.Create();
-    var build = await CreateReadyHopDiffAsync(scope.Root);
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
-    await File.AppendAllTextAsync(archivePath, "tampered");
     var baseline = Path.Combine(scope.Root, "baseline");
     var solutions = Path.Combine(scope.Root, "Solutions");
     Directory.CreateDirectory(baseline);
@@ -1394,34 +1545,28 @@ static async Task PackageIntegrationRejectsTamperedArtifactBeforeWrite()
     await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"), "<AML />");
     var original = Path.Combine(solutions, "original.xml");
     await File.WriteAllTextAsync(original, "<AML />");
-    var request = new AdaptedPackageRequest(Guid.NewGuid(), build.SourceVersion, build.TargetVersion, baseline, solutions,
-        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), archivePath,
-        new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
-            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow);
+    var request = new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-baseline", "12SP9", baseline), new Rule2ComparisonTarget("12SP18", solutions),
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), ResolvedRule2(), DateTimeOffset.UtcNow);
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() => AdaptedPackageBuilder.BuildAsync(request));
-    Assert.Equal("<AML />", await File.ReadAllTextAsync(original));
-    Assert.False(Directory.Exists(request.BackupRoot));
-    Assert.False(Directory.Exists(request.AttemptRoot));
+    var result = await AdaptedPackageBuilder.BuildAsync(request);
+    Assert.Equal(AdaptedPackageStatus.ReadyForFinalization, result.Status);
+    Assert.True(Directory.Exists(request.BackupRoot));
+    Assert.True(File.Exists(Path.Combine(result.SolutionsBackupRoot, "original.xml")));
 }
 
 static async Task PackageIntegrationBlocksFinalizationForManualReview()
 {
     await using var scope = TestScope.Create();
-    var build = await CreateReadyHopDiffAsync(scope.Root);
-    var archivePath = Path.Combine(scope.Root, "rule1.zip");
-    var artifact = await OotbHopDiffPackager.PackageAsync(build, archivePath, DateTimeOffset.UtcNow);
     var baseline = Path.Combine(scope.Root, "baseline");
     var solutions = Path.Combine(scope.Root, "Solutions");
     Directory.CreateDirectory(baseline);
     Directory.CreateDirectory(solutions);
     await File.WriteAllTextAsync(Path.Combine(baseline, "paired.xml"),
         "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>one</label><label>two</label><description>customer</description></Item></AML>");
-    await File.WriteAllTextAsync(Path.Combine(solutions, "original.xml"), "<AML />");
-    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), build.SourceVersion,
-        build.TargetVersion, baseline, solutions, Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"),
-        archivePath, new OotbHopDiffReuseRequirement(build.SourceVersion, build.TargetVersion, build.RuleSets,
-            build.EffectiveRuleChecksum, artifact.ArchiveChecksum!), ResolvedRule2(), DateTimeOffset.UtcNow));
+    await File.WriteAllTextAsync(Path.Combine(solutions, "paired.xml"),
+        "<AML><Item type=\"Part\" id=\"A\" action=\"edit\"><label>target</label><description>target</description></Item></AML>");
+    var adapted = await AdaptedPackageBuilder.BuildAsync(new AdaptedPackageRequest(Guid.NewGuid(), new Rule2ComparisonSource("customer-baseline", "12SP9", baseline), new Rule2ComparisonTarget("12SP18", solutions),
+        Path.Combine(scope.Root, "backups"), Path.Combine(scope.Root, "attempt"), ResolvedRule2(), DateTimeOffset.UtcNow));
     var completionRoot = Path.Combine(scope.Root, "completion");
 
     Assert.Equal(AdaptedPackageStatus.Blocked, adapted.Status);
@@ -1763,6 +1908,734 @@ static async Task CoreTreeCommandCoordinatesCase()
     Assert.Equal(CoreTreeComparisonCommandStatus.Blocked, retry.CommandStatus);
     Assert.Equal(Guid.Empty, retry.AttemptId);
     Assert.False(Directory.Exists(retryOutput));
+}
+
+static async Task CoreTreeEvidenceCommandClassifiesEvidenceStates()
+{
+    await using var scope = TestScope.Create();
+    var tree = Path.Combine(scope.Root, "tree");
+    var evidence = Path.Combine(scope.Root, "evidence");
+    Directory.CreateDirectory(Path.Combine(tree, "Innovator", "Client"));
+    Directory.CreateDirectory(Path.Combine(tree, "Innovator", "Server"));
+    await File.WriteAllTextAsync(Path.Combine(tree, "Innovator", "Client", "app.js"), "one");
+    await File.WriteAllTextAsync(Path.Combine(tree, "Innovator", "Server", "app.dll"), "two");
+    Directory.CreateDirectory(evidence);
+
+    var input = new CoreTreeEvidenceInput("customer-11sp9", "11.0 SP9", tree, evidence);
+    var command = new CoreTreeEvidenceCommand();
+    var preview = await command.PreviewAsync(input, "operator");
+    Assert.Equal(CoreTreeEvidenceSetStatus.Missing, preview.Status);
+
+    var written = await command.WriteAsync(input, "operator");
+    Assert.Equal(CoreTreeEvidenceOperationStatus.Completed, written.OperationStatus);
+    Assert.Equal(CoreTreeEvidenceSetStatus.CompleteCompatible, written.Evidence.Status);
+
+    await File.WriteAllTextAsync(Path.Combine(tree, "Innovator", "Client", "app.js"), "changed");
+    var stale = await command.PreviewAsync(input, "operator");
+    Assert.Equal(CoreTreeEvidenceSetStatus.StaleOrConflict, stale.Status);
+}
+
+static Task CoreTreeEvidenceWriteUsesAtomicPreflightContract()
+{
+    var prompt = File.ReadAllText(ProjectPath("docs", "operations", "core-tree", "codex-core-tree-evidence-prompt.md"));
+    foreach (var required in new[]
+    {
+        "CompleteCompatible", "Partial", "StaleOrConflict", "零寫入預檢",
+        "Created", "Reused", "任一輸入為 `Partial` 或 `StaleOrConflict` 時，整次停止"
+    })
+        Assert.True(prompt.Contains(required, StringComparison.Ordinal), $"Core Tree Evidence Prompt 缺少 {required} 契約。 ");
+    return Task.CompletedTask;
+}
+
+static Task CustomerPatchPromptSeparatesRule1Routing()
+{
+    var prompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-package-comparison-preparation-prompt.md"));
+    foreach (var required in new[]
+    {
+        "`CUSTOMER_PATCH_COMPARISON` 的可用動作僅為 `CONFIRM_PATCH_INPUT` 與 `PREFLIGHT_CUSTOMER_PATCH`",
+        "不得根據舊的 Rule 1 preparation",
+        "## OOTB Rule 1 獨立分支",
+        "只有使用者明確選擇 `OOTB_RULE1`"
+    })
+        Assert.True(prompt.Contains(required, StringComparison.Ordinal), $"Customer-Patch Prompt 缺少 {required} 分流契約。");
+    return Task.CompletedTask;
+}
+
+static Task CustomerPatchEvidenceRequestPromptUsesTopLevelSides()
+{
+    foreach (var path in new[]
+    {
+        ProjectPath("docs", "operations", "case-management", "codex-package-preparation-prompt.md"),
+        ProjectPath("docs", "operations", "case-management", "codex-customer-patch-evidence-recording-prompt.md"),
+        ProjectPath("docs", "operations", "case-management", "codex-package-comparison-preparation-prompt.md")
+    })
+    {
+        var prompt = File.ReadAllText(path);
+        Assert.True(prompt.Contains("頂層 `source` 與 `target`", StringComparison.Ordinal), $"{Path.GetFileName(path)} 未宣告 evidence request 的 CLI 頂層 sides 契約。");
+        Assert.True(prompt.Contains("不得使用巢狀 `comparison`", StringComparison.Ordinal), $"{Path.GetFileName(path)} 未禁止巢狀 comparison request 格式。");
+    }
+    return Task.CompletedTask;
+}
+
+static Task CustomerPatchLegacyRequestRepairRequiresBackupAndSeparateRecording()
+{
+    var evidencePrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-customer-patch-evidence-recording-prompt.md"));
+    var preparationPrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-package-comparison-preparation-prompt.md"));
+    foreach (var required in new[]
+    {
+        "repairLegacyRequest: true", "先建立不可覆寫備份", "不得執行 `--record-customer-patch-evidence`",
+        "不得建立 `patch-support-evidence.json`", "不得追加 history"
+    })
+        Assert.True(evidencePrompt.Contains(required, StringComparison.Ordinal), $"證據登錄 Prompt 缺少舊 request 修復保護：{required}。");
+    Assert.True(preparationPrompt.Contains("repairLegacyRequest: true", StringComparison.Ordinal), "比較準備 Prompt 未說明舊 request 修復入口。");
+    return Task.CompletedTask;
+}
+
+static Task PackageScaffoldPromptUsesCaseRelativePathsAndCorrectUnicode()
+{
+    var scaffoldPrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-package-preparation-prompt.md"));
+    var design = File.ReadAllText(ProjectPath("docs", "superpowers", "specs", "2026-09-02-customer-patch-comparison-design.md"));
+    foreach (var required in new[]
+    {
+        "--scaffold-customer-patch-preparation", "UTF-8 JSON", "客戶 Package 基準實際版本",
+        "所有相對路徑都以案件根目錄為基準", "`evidenceRelativePath` 只指向 evidence 目錄",
+        "不得使用 Unicode code point", "不得使用巢狀 `comparison`"
+    })
+        Assert.True(scaffoldPrompt.Contains(required, StringComparison.Ordinal), $"Package 骨架 Prompt 缺少正式 CLI 或路徑契約：{required}。");
+    Assert.True(design.Contains("CLI 相對路徑必須以案件根目錄為基準", StringComparison.Ordinal), "Customer-Patch 設計規格未固定 CLI 相對路徑基準。");
+    Assert.True(design.Contains("--scaffold-customer-patch-preparation", StringComparison.Ordinal), "Customer-Patch 設計規格未登錄正式 scaffold CLI。");
+    var comparisonPrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-package-comparison-preparation-prompt.md"));
+    Assert.True(comparisonPrompt.Contains("request 草稿", StringComparison.Ordinal) && comparisonPrompt.Contains("正式 evidence", StringComparison.Ordinal), "比較準備 Prompt 未區分 request 草稿與正式 evidence。");
+    Assert.True(comparisonPrompt.Contains("空的 `rule-sets` 只表示目錄存在", StringComparison.Ordinal), "比較準備 Prompt 未區分空規則庫與已發布規則。");
+    Assert.True(comparisonPrompt.Contains("只有發布成功後的 `rule-sets\\published\\...` 規則", StringComparison.Ordinal), "比較準備 Prompt 未固定已發布規則的有效來源。");
+    Assert.True(comparisonPrompt.Contains("`Blocked` 表示已執行但驗證未通過", StringComparison.Ordinal), "比較準備 Prompt 未區分 Blocked 與尚未執行。");
+    Assert.True(comparisonPrompt.Contains("重新執行 evidence 登錄不會建立或補建", StringComparison.Ordinal), "比較準備 Prompt 未固定 evidence 與規則發布的責任邊界。");
+    var orderedSteps = new[]
+    {
+        "1. codex-package-preparation-prompt.md",
+        "2. 人工放入三跳的客戶基準與 Patch／Support Package 檔案",
+        "3. codex-customer-patch-rule-publication-preparation-prompt.md",
+        "4. 人工明確確認發布",
+        "5. codex-customer-patch-rule-publication-execution-prompt.md",
+        "6. codex-customer-patch-evidence-recording-prompt.md",
+        "7. 本文件的 PREFLIGHT_CUSTOMER_PATCH",
+        "8. 實際 Customer-Patch Package 比較"
+    };
+    var previousStep = -1;
+    foreach (var step in orderedSteps)
+    {
+        var currentStep = comparisonPrompt.IndexOf(step, StringComparison.Ordinal);
+        Assert.True(currentStep > previousStep, $"比較準備 Prompt 的 Customer-Patch 程序順序錯誤或缺少：{step}。");
+        previousStep = currentStep;
+    }
+    var evidencePrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-customer-patch-evidence-recording-prompt.md"));
+    Assert.True(evidencePrompt.Contains("不建立或發布 `rule-sets`", StringComparison.Ordinal), "Evidence Prompt 未禁止代替規則發布。");
+    var publicationPrompt = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "codex-customer-patch-rule-publication-preparation-prompt.md"));
+    Assert.True(publicationPrompt.Contains("`rule-sets\\approval-drafts`", StringComparison.Ordinal), "規則發布準備 Prompt 未固定 approval-drafts 路徑。");
+    Assert.True(publicationPrompt.Contains("不接受或產生舊的 `rule-sets\\approvals` 路徑", StringComparison.Ordinal), "規則發布準備 Prompt 未禁止舊 approvals 路徑。");
+    Assert.True(publicationPrompt.Contains("--prepare-customer-patch-rule-publication <request.json>", StringComparison.Ordinal), "規則發布準備 Prompt 未固定正式 CLI 旗標。");
+    Assert.True(publicationPrompt.Contains("若 `<caseRoot>\\rule-sets` 不存在，建立該規則儲存目錄", StringComparison.Ordinal), "規則發布準備 Prompt 未說明 rule-sets 缺少時的建立行為。");
+    var procedureMap = File.ReadAllText(ProjectPath("docs", "operations", "case-management", "customer-patch-procedure-map.md"));
+    foreach (var required in new[]
+    {
+        "## 固定執行順序", "codex-customer-patch-rule-publication-preparation-prompt.md",
+        "codex-customer-patch-rule-publication-execution-prompt.md", "codex-customer-patch-evidence-recording-prompt.md",
+        "rule-sets\\published\\<RuleSetId>\\00000001.json", "第 6 項也不會補建任何", "第 7 項 preflight 結果為 Ready",
+        "### 8. 開始實際 Package 比較", "尚未提供實際 Customer-Patch Package 比較 command", "NotAvailable"
+    })
+        Assert.True(procedureMap.Contains(required, StringComparison.Ordinal), $"Customer-Patch 程序對照文件缺少：{required}。");
+    Assert.True(design.Contains("已呼叫 preflight command 並取得 `Ready` 或 `Blocked` 結果", StringComparison.Ordinal), "比較設計規格未固定 preflight 執行狀態語意。");
+    return Task.CompletedTask;
+}
+
+static async Task CaseDirectoryScaffoldValidateIsZeroWriteAndUnicodeSafe()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "case-root");
+    Directory.CreateDirectory(caseRoot);
+    var request = new CaseDirectoryScaffoldRequest(
+        caseRoot, "芯洲", "芯洲", "11.0 SP9", "11sp9", "R38", "r38", "BCO\\kenny", "DIRECTORY_SCAFFOLD_ONLY");
+    var before = SnapshotTree(caseRoot);
+
+    var plan = new CaseDirectoryScaffoldCommand().Validate(request);
+
+    Assert.Equal("DIRECTORY_SCAFFOLD_ONLY", plan.ExecutionMode);
+    Assert.Equal(Path.Combine(caseRoot, "芯洲"), plan.TargetPath);
+    Assert.Equal(20, plan.DirectoryPaths.Count);
+    Assert.Equal(7, plan.Templates.Count);
+    Assert.False(Directory.Exists(plan.TargetPath));
+    Assert.False(File.Exists(Path.Combine(plan.TargetPath, "aras-upgrade-case.json")));
+    Assert.False(File.Exists(Path.Combine(plan.TargetPath, ".orchestrator", "history.jsonl")));
+    Assert.Equal(before, SnapshotTree(caseRoot));
+}
+
+static async Task CaseDirectoryScaffoldRejectsUnsafeRequestsWithoutWrites()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "case-root");
+    Directory.CreateDirectory(caseRoot);
+    var valid = new CaseDirectoryScaffoldRequest(
+        caseRoot, "safe-case", "CUST-A", "11.0 SP9", "11sp9", "R38", "r38", "BCO\\kenny", "DIRECTORY_SCAFFOLD_ONLY");
+    var before = SnapshotTree(caseRoot);
+    var command = new CaseDirectoryScaffoldCommand();
+
+    foreach (var request in new[]
+    {
+        valid with { ExecutionMode = "SCAFFOLD_ONLY" },
+        valid with { TargetVersion = "11.0 SP9" },
+        valid with { SourceSlug = "11SP9" },
+        valid with { CustomerCode = "<待提供>" },
+        valid with { CaseDirectoryName = ".." },
+        valid with { CaseDirectoryName = "nested\\case" }
+    })
+    {
+        Assert.Throws<InvalidDataException>(() => command.Validate(request));
+        Assert.Equal(before, SnapshotTree(caseRoot));
+    }
+
+    Directory.CreateDirectory(Path.Combine(caseRoot, "safe-case"));
+    Assert.Throws<InvalidOperationException>(() => command.Validate(valid));
+}
+
+static async Task CaseDirectoryScaffoldTemplatesContainOnlyPlaceholders()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "case-root");
+    Directory.CreateDirectory(caseRoot);
+    var request = new CaseDirectoryScaffoldRequest(
+        caseRoot, "芯洲", "芯洲", "11.0 SP9", "11sp9", "R38", "r38", "BCO\\kenny", "DIRECTORY_SCAFFOLD_ONLY");
+    var command = new CaseDirectoryScaffoldCommand();
+
+    Assert.Throws<InvalidDataException>(() => command.Validate(request with { CaseRoot = "." }));
+    Assert.Throws<InvalidDataException>(() => command.Validate(request with { CaseDirectoryName = "case. " }));
+    Assert.Throws<InvalidDataException>(() => command.Validate(request with { CaseDirectoryName = "CON" }));
+
+    var plan = command.Validate(request);
+
+    foreach (var template in plan.Templates)
+    {
+        Assert.False(template.Content.Contains("BCO\\kenny", StringComparison.Ordinal));
+        Assert.False(template.Content.Contains("11.0 SP9", StringComparison.Ordinal));
+        Assert.False(template.Content.Contains("R38", StringComparison.Ordinal));
+    }
+}
+
+static async Task CaseDirectoryScaffoldApplyCreatesOnlyNonFormalArtifacts()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "case-root");
+    Directory.CreateDirectory(caseRoot);
+    var request = new CaseDirectoryScaffoldRequest(
+        caseRoot, "芯洲", "芯洲", "11.0 SP9", "11sp9", "R38", "r38", "BCO\\kenny", "DIRECTORY_SCAFFOLD_ONLY");
+
+    var result = await new CaseDirectoryScaffoldCommand().ApplyAsync(request);
+
+    Assert.Equal("Created", result.Status);
+    Assert.True(Directory.Exists(result.TargetPath));
+    Assert.Equal(20, result.DirectoryPaths.Count);
+    Assert.Equal(7, result.TemplatePaths.Count);
+    Assert.True(result.DirectoryPaths.All(Directory.Exists));
+    Assert.True(result.TemplatePaths.All(File.Exists));
+    Assert.False(File.Exists(Path.Combine(result.TargetPath, "aras-upgrade-case.json")));
+    Assert.False(File.Exists(Path.Combine(result.TargetPath, ".orchestrator", "history.jsonl")));
+    Assert.False(Directory.EnumerateDirectories(caseRoot, ".*.scaffold-staging-*", SearchOption.TopDirectoryOnly).Any());
+    foreach (var jsonPath in result.TemplatePaths.Where(path => path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        using (JsonDocument.Parse(await File.ReadAllTextAsync(jsonPath))) { }
+}
+
+static async Task CoreTreeCliValidatesCaseDirectoryScaffoldWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "validate-root");
+    Directory.CreateDirectory(caseRoot);
+    var requestPath = Path.Combine(scope.Root, "case-scaffold-validate.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot,
+        caseDirectoryName = "芯洲",
+        customerCode = "芯洲",
+        sourceVersion = "11.0 SP9",
+        sourceSlug = "11sp9",
+        targetVersion = "R38",
+        targetSlug = "r38",
+        actor = "BCO\\kenny",
+        executionMode = "DIRECTORY_SCAFFOLD_ONLY"
+    }), Encoding.UTF8);
+
+    var result = await RunCoreTreeCliAsync("--validate-case-directory-scaffold", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var response = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal("Validated", response.RootElement.GetProperty("status").GetString());
+    Assert.False(Directory.Exists(Path.Combine(caseRoot, "芯洲")));
+}
+
+static async Task CoreTreeCliCreatesCaseDirectoryScaffoldFromUtf8Request()
+{
+    await using var scope = TestScope.Create();
+    var caseRoot = Path.Combine(scope.Root, "apply-root");
+    Directory.CreateDirectory(caseRoot);
+    var requestPath = Path.Combine(scope.Root, "case-scaffold-apply.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot,
+        caseDirectoryName = "芯洲",
+        customerCode = "芯洲",
+        sourceVersion = "11.0 SP9",
+        sourceSlug = "11sp9",
+        targetVersion = "R38",
+        targetSlug = "r38",
+        actor = "BCO\\kenny",
+        executionMode = "DIRECTORY_SCAFFOLD_ONLY"
+    }), Encoding.UTF8);
+
+    var result = await RunCoreTreeCliAsync("--scaffold-case-directory", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var response = JsonDocument.Parse(result.StandardOutput);
+    Assert.Equal("Created", response.RootElement.GetProperty("status").GetString());
+    var target = Path.Combine(caseRoot, "芯洲");
+    Assert.True(Directory.Exists(target));
+    Assert.False(File.Exists(Path.Combine(target, "aras-upgrade-case.json")));
+    Assert.False(File.Exists(Path.Combine(target, ".orchestrator", "history.jsonl")));
+}
+
+static Task CustomerPatchComparisonPolicyRetainsItemsOnly()
+{
+    var draft = DefaultUpgradeRuleSets.CreateCustomerPatchComparisonDraft("operator", DateTimeOffset.UtcNow);
+    Assert.True(RuleSetValidator.Validate(draft).IsValid);
+    Assert.Equal(RuleSetKind.CustomerPatchComparison, draft.Kind);
+    Assert.Equal(RuleStepKind.CustomerPatchRetainItems, draft.Steps.Single().Kind);
+
+    var invalid = draft with { Steps = [new RuleStepDefinition("bad", 1, RuleStepKind.RemoveNamedProperties, [], [], null)] };
+    Assert.False(RuleSetValidator.Validate(invalid).IsValid);
+    var configured = draft with { Steps = [draft.Steps.Single() with { PropertyNames = ["name"] }] };
+    Assert.False(RuleSetValidator.Validate(configured).IsValid);
+    return Task.CompletedTask;
+}
+
+static RuleSetResolutionResult ResolvedCustomerPatchPolicy(string targetRelease) =>
+    RuleSetResolver.Resolve([Published(DefaultUpgradeRuleSets.CreateCustomerPatchComparisonDraft("operator", DateTimeOffset.UtcNow), 1)], RuleSetKind.CustomerPatchComparison, string.Empty, targetRelease);
+
+static async Task CustomerPatchPreparationScaffoldCreatesParseableOutputs()
+{
+    await using var scope = TestScope.Create();
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, "package-upgrade"));
+    var request = new CustomerPatchPreparationScaffoldRequest(
+        scope.CaseRoot, "preparation-20260904-001", "customer-11sp9", "11.0 SP9", "BCO\\kenny",
+        [
+            new("11.0 SP8", "11.0 SP15"),
+            new("11.0 SP15", "12.0 SP18"),
+            new("12.0 SP18", "R38")
+        ]);
+
+    var result = await new CustomerPatchPreparationScaffoldCommand().ExecuteAsync(request);
+
+    Assert.Equal("Created", result.Status);
+    Assert.True(Directory.Exists(result.PreparationPath));
+    Assert.True(File.Exists(result.PlanPath));
+    Assert.Equal(3, result.EvidenceRequestPaths.Count);
+    using var plan = JsonDocument.Parse(await File.ReadAllTextAsync(result.PlanPath));
+    Assert.Equal("CUSTOMER_PATCH_COMPARISON", plan.RootElement.GetProperty("workflow").GetString());
+    Assert.Equal("11.0 SP9", plan.RootElement.GetProperty("customerPackageBaselineActualVersion").GetString());
+    var hops = plan.RootElement.GetProperty("hops").EnumerateArray().ToArray();
+    Assert.Equal(3, hops.Length);
+    Assert.Equal("11.0 SP8", hops[0].GetProperty("sourceVersion").GetString());
+    Assert.Equal("CustomerBaseline", hops[0].GetProperty("comparison").GetProperty("source").GetProperty("role").GetString());
+    Assert.Equal("TargetPackage", hops[0].GetProperty("comparison").GetProperty("target").GetProperty("role").GetString());
+    Assert.True(hops.All(hop => hop.GetProperty("evidence").GetString()!.StartsWith("package-upgrade/preparation-20260904-001/", StringComparison.Ordinal)));
+
+    foreach (var path in result.EvidenceRequestPaths)
+    {
+        Assert.True(new FileInfo(path).Length > 0);
+        using var evidenceRequest = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        Assert.True(evidenceRequest.RootElement.TryGetProperty("hopId", out _));
+        Assert.True(evidenceRequest.RootElement.TryGetProperty("source", out _));
+        Assert.True(evidenceRequest.RootElement.TryGetProperty("target", out _));
+        Assert.False(evidenceRequest.RootElement.TryGetProperty("comparison", out _));
+        Assert.False(evidenceRequest.RootElement.GetProperty("evidenceRelativePath").GetString()!.EndsWith("patch-support-evidence.request.json", StringComparison.Ordinal));
+    }
+}
+
+static async Task CustomerPatchPreparationScaffoldRejectsInvalidRequest()
+{
+    await using var scope = TestScope.Create();
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, "package-upgrade"));
+    var command = new CustomerPatchPreparationScaffoldCommand();
+    await Assert.ThrowsAsync<InvalidDataException>(() => command.ExecuteAsync(new(
+        scope.CaseRoot, "preparation-missing-version", "customer-11sp9", "", "BCO\\kenny", [new("11.0 SP8", "11.0 SP15")])));
+    await Assert.ThrowsAsync<InvalidDataException>(() => command.ExecuteAsync(new(
+        scope.CaseRoot, "preparation-duplicate-hop", "customer-11sp9", "11.0 SP9", "BCO\\kenny",
+        [new("11.0 SP8", "11.0 SP15"), new("11.0 SP8", "11.0 SP15")])));
+    await Assert.ThrowsAsync<InvalidDataException>(() => command.ExecuteAsync(new(
+        scope.CaseRoot, "preparation-unsafe-hop", "customer-11sp9", "11.0 SP9", "BCO\\kenny", [new("***", "???")])));
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, "package-upgrade", "preparation-missing-version")));
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, "package-upgrade", "preparation-duplicate-hop")));
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, "package-upgrade", "preparation-unsafe-hop")));
+}
+
+static async Task CustomerPatchPreparationScaffoldRejectsExistingPreparation()
+{
+    await using var scope = TestScope.Create();
+    var target = Path.Combine(scope.CaseRoot, "package-upgrade", "preparation-existing");
+    Directory.CreateDirectory(target);
+    await Assert.ThrowsAsync<InvalidOperationException>(() => new CustomerPatchPreparationScaffoldCommand().ExecuteAsync(new(
+        scope.CaseRoot, "preparation-existing", "customer-11sp9", "11.0 SP9", "BCO\\kenny", [new("11.0 SP8", "11.0 SP15")])));
+    Assert.True(Directory.Exists(target));
+}
+
+static async Task PackageCliScaffoldsCustomerPatchPreparation()
+{
+    await using var scope = TestScope.Create();
+    var unicodeCaseRoot = Path.Combine(scope.Root, "芯洲");
+    Directory.CreateDirectory(Path.Combine(unicodeCaseRoot, "package-upgrade"));
+    var requestPath = Path.Combine(scope.Root, "scaffold-request.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot = unicodeCaseRoot,
+        preparationId = "preparation-cli-001",
+        customerPackageBaselineId = "customer-11sp9",
+        customerPackageBaselineActualVersion = "11.0 SP9",
+        actor = "BCO\\kenny",
+        hops = new[] { new { sourceVersion = "11.0 SP8", targetVersion = "11.0 SP15" } }
+    }));
+
+    var result = await RunPackageCliAsync("--scaffold-customer-patch-preparation", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var response = JsonDocument.Parse(result.StandardOutput);
+    var planPath = response.RootElement.GetProperty("planPath").GetString()!;
+    Assert.True(new FileInfo(planPath).Length > 0);
+    using var plan = JsonDocument.Parse(await File.ReadAllTextAsync(planPath));
+    Assert.Equal("preparation-cli-001", plan.RootElement.GetProperty("preparationId").GetString());
+}
+
+static async Task CustomerPatchEvidenceRegistrationRecordsImmutableEvidence()
+{
+    await using var scope = TestScope.Create();
+    var patchRelative = "package/hop-a/customer-patch-comparison/patch-support-input";
+    var evidenceRelative = "package/hop-a/customer-patch-comparison/evidence";
+    var patchRoot = Path.Combine(scope.CaseRoot, patchRelative);
+    Directory.CreateDirectory(patchRoot);
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, evidenceRelative));
+    await File.WriteAllTextAsync(Path.Combine(patchRoot, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\" /></AML>");
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var now = DateTimeOffset.Parse("2026-09-02T02:00:00Z");
+    var source = new CustomerPatchComparisonSource("customer-11sp9", "11SP9", "package/customer-package-baseline/customer-11sp9/input");
+    var target = new CustomerPatchComparisonTarget("R38", patchRelative);
+    var request = new CustomerPatchEvidenceRegistrationRequest(scope.CaseRoot, "preparation-a", "R38", source, target, evidenceRelative, patchRelative, "operator");
+
+    var command = new CustomerPatchEvidenceRegistrationCommand(() => now);
+    var result = await command.ExecuteAsync(request);
+
+    Assert.Equal("operator", result.Evidence.VerifiedBy);
+    Assert.Equal(patchRelative, result.Evidence.PatchSupportSource);
+    Assert.Equal("customer-11sp9", result.Evidence.Source.BaselineId);
+    Assert.Equal("R38", result.Evidence.Target.TargetRelease);
+    Assert.Equal(now, result.Evidence.VerifiedAt);
+    Assert.Equal((await PackageInputTreeDigest.ComputeAsync(patchRoot)).TreeChecksum, result.Evidence.PatchSupportInputChecksum);
+    Assert.True(File.Exists(Path.Combine(scope.CaseRoot, evidenceRelative, "patch-support-evidence.json")));
+    await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteAsync(request));
+    var history = await ReadAll(new AppendOnlyHistoryStore(store.ToolDataPath));
+    Assert.True(history.Any(entry => entry.EventType == HistoryEventTypes.CustomerPatchEvidenceRecorded));
+}
+
+static async Task CustomerPatchEvidenceRegistrationRejectsManualSourceText()
+{
+    await using var scope = TestScope.Create();
+    var patchRelative = "package/hop-a/customer-patch-comparison/patch-support-input";
+    var evidenceRelative = "package/hop-a/customer-patch-comparison/evidence";
+    var patchRoot = Path.Combine(scope.CaseRoot, patchRelative);
+    Directory.CreateDirectory(patchRoot);
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, evidenceRelative));
+    await File.WriteAllTextAsync(Path.Combine(patchRoot, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\" /></AML>");
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+
+    var source = new CustomerPatchComparisonSource("customer-11sp9", "11SP9", "package/customer-package-baseline/customer-11sp9/input");
+    var target = new CustomerPatchComparisonTarget("R38", patchRelative);
+    var request = new CustomerPatchEvidenceRegistrationRequest(scope.CaseRoot, "preparation-a", "R38", source, target, evidenceRelative, "manual source text", "operator");
+
+    await Assert.ThrowsAsync<ArgumentException>(() => new CustomerPatchEvidenceRegistrationCommand().ExecuteAsync(request));
+}
+
+static async Task CustomerPatchPreflightVerifiesEvidenceWithoutMutation()
+{
+    await using var scope = TestScope.Create();
+    var customerRelative = "package/customer-package-baseline/customer-11sp9/input";
+    var patchRelative = "package/hop-a/customer-patch-comparison/patch-support-input";
+    var evidenceRelative = "package/hop-a/customer-patch-comparison/evidence";
+    var attemptsRelative = "package/hop-a/customer-patch-comparison/comparison-attempts";
+    foreach (var relative in new[] { customerRelative, patchRelative, attemptsRelative, evidenceRelative })
+        Directory.CreateDirectory(Path.Combine(scope.CaseRoot, relative));
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, customerRelative, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\" /></AML>");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, patchRelative, "part.xml"), "<AML><Item type=\"Part\" id=\"A\" action=\"edit\" /></AML>");
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    var store = new CaseStore(scope.CaseRoot);
+    await store.CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var source = new CustomerPatchComparisonSource("customer-11sp9", "11SP9", customerRelative);
+    var target = new CustomerPatchComparisonTarget("R38", patchRelative);
+    await new CustomerPatchEvidenceRegistrationCommand().ExecuteAsync(new(scope.CaseRoot, "preparation-a", "R38", source, target, evidenceRelative, patchRelative, "operator"));
+    var policy = ResolvedCustomerPatchPolicy("R38");
+    var request = new CustomerPatchComparisonPreflightRequest(scope.CaseRoot, "preparation-a", "R38", source, target, evidenceRelative, attemptsRelative, "attempt-001", policy);
+
+    var result = await new CustomerPatchComparisonPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CustomerPatchComparisonPreflightStatus.Ready, result.Status);
+    Assert.False(Directory.Exists(result.ExpectedAttemptPath));
+}
+
+static async Task CustomerPatchPublicationPreflightVerifiesApprovalReceipt()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var ruleStoreRelative = "rule-sets";
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, ruleStoreRelative));
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：BCO\\kenny\n結論：同意");
+    var receipt = new CustomerPatchRulePublicationApprovalReceipt(
+        "BCO\\kenny", "Approved", approvalRelative, TestHashFile(approvalPath));
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(receipt));
+    var request = new CustomerPatchCommonRulePublicationPreflightRequest(
+        scope.CaseRoot, ruleStoreRelative, approvalRelative, receiptRelative, "BCO\\kenny");
+
+    var result = await new CustomerPatchCommonRulePublicationPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CustomerPatchCommonRulePublicationPreflightStatus.Ready, result.Status);
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, ruleStoreRelative, "drafts")));
+    await File.AppendAllTextAsync(approvalPath, "\n異動");
+    await Assert.ThrowsAsync<InvalidDataException>(() => new CustomerPatchCommonRulePublicationPreflightCommand().ExecuteAsync(request));
+}
+
+static async Task CustomerPatchRulePublicationPreparationCreatesApprovalArtifacts()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var result = await new CustomerPatchCommonRulePublicationPreparationCommand(() => DateTimeOffset.Parse("2026-09-04T04:00:00Z"))
+        .ExecuteAsync(new(scope.CaseRoot, "BCO\\kenny", "同意"));
+
+    Assert.Equal("Created", result.Status);
+    Assert.True(Directory.Exists(Path.Combine(scope.CaseRoot, "rule-sets")));
+    Assert.True(File.Exists(result.ApprovalEvidencePath));
+    Assert.True(File.Exists(result.ApprovalReceiptPath));
+    Assert.True(File.Exists(result.PendingPath));
+    Assert.True(File.Exists(result.PublicationRequestPath));
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, "rule-sets", "published")));
+    var receipt = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(result.ApprovalReceiptPath));
+    Assert.Equal(result.ApprovalEvidenceRelativePath, receipt.GetProperty("approvalEvidenceRelativePath").GetString());
+    Assert.Equal(TestHashFile(result.ApprovalEvidencePath), receipt.GetProperty("approvalEvidenceSha256").GetString());
+    var publicationRequest = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(result.PublicationRequestPath));
+    Assert.Equal("BCO\\kenny", publicationRequest.GetProperty("approvedBy").GetString());
+    Assert.Equal("rule-sets", publicationRequest.GetProperty("ruleStoreRelativePath").GetString());
+}
+
+static async Task PackageCliPreparesCustomerPatchRulePublication()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, "rule-sets"));
+    var requestPath = Path.Combine(scope.Root, "rule-publication-preparation.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot = scope.CaseRoot,
+        actor = "BCO\\kenny",
+        humanApprovalDecision = "同意"
+    }));
+
+    var result = await RunPackageCliAsync("--prepare-customer-patch-rule-publication", requestPath);
+
+    Assert.Equal(0, result.ExitCode);
+    using var response = JsonDocument.Parse(result.StandardOutput);
+    Assert.True(File.Exists(response.RootElement.GetProperty("publicationRequestPath").GetString()));
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, "rule-sets", "published")));
+}
+
+static async Task CustomerPatchPublicationPreflightAcceptsApprovalEvidenceReceipt()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var ruleStoreRelative = "rule-sets";
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    Directory.CreateDirectory(Path.Combine(scope.CaseRoot, ruleStoreRelative));
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：BCO\\kenny\n結論：同意");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(new
+    {
+        actor = "BCO\\kenny",
+        decision = "Approved",
+        approvalEvidenceRelativePath = approvalRelative,
+        approvalEvidenceSha256 = TestHashFile(approvalPath)
+    }));
+    var request = new CustomerPatchCommonRulePublicationPreflightRequest(
+        scope.CaseRoot, ruleStoreRelative, approvalRelative, receiptRelative, "BCO\\kenny");
+
+    var result = await new CustomerPatchCommonRulePublicationPreflightCommand().ExecuteAsync(request);
+
+    Assert.Equal(CustomerPatchCommonRulePublicationPreflightStatus.Ready, result.Status);
+    Assert.False(Directory.Exists(Path.Combine(scope.CaseRoot, ruleStoreRelative, "drafts")));
+}
+
+static async Task CustomerPatchCommonRulePublicationCliPublishesOnce()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var ruleStore = Path.Combine(scope.CaseRoot, "rule-sets");
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    Directory.CreateDirectory(ruleStore);
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：operator\n結論：同意");
+    var receipt = new CustomerPatchRulePublicationApprovalReceipt(
+        "operator", "Approved", approvalRelative, TestHashFile(approvalPath));
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(receipt));
+    var requestPath = Path.Combine(scope.Root, "publish-customer-patch-rule.json");
+    await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot = scope.CaseRoot,
+        ruleStoreRelativePath = "rule-sets",
+        approvalEvidenceRelativePath = approvalRelative,
+        approvalReceiptRelativePath = receiptRelative,
+        actor = "operator"
+    }));
+
+    var preflight = await RunPackageCliAsync("--preflight-customer-patch-common-rule", requestPath);
+
+    Assert.True(preflight.ExitCode == 0, preflight.StandardError);
+    Assert.False(Directory.Exists(Path.Combine(ruleStore, "drafts")));
+    Assert.False(Directory.Exists(Path.Combine(ruleStore, "published")));
+
+    var first = await RunPackageCliAsync("--publish-customer-patch-common-rule", requestPath);
+
+    Assert.Equal(0, first.ExitCode);
+    var published = await new RuleSetStore(ruleStore).ListPublishedAsync();
+    Assert.Equal(1, published.Count);
+    Assert.Equal(RuleSetKind.CustomerPatchComparison, published[0].Kind);
+    Assert.Equal(RuleSetScope.Common, published[0].Scope);
+    Assert.True(File.Exists(Path.Combine(ruleStore, "drafts", published[0].SourceDraftId.ToString("N") + ".json")));
+    Assert.True(File.Exists(Path.Combine(ruleStore, "published", published[0].RuleSetId.ToString("N"), "00000001.json")));
+
+    var second = await RunPackageCliAsync("--publish-customer-patch-common-rule", requestPath);
+
+    Assert.Equal(1, second.ExitCode);
+}
+
+static async Task CustomerPatchCodexExecutionRejectsApprovalActorMismatchWithoutWrites()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var ruleStoreRelative = "rule-sets";
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    var ruleStorePath = Path.Combine(scope.CaseRoot, ruleStoreRelative);
+    Directory.CreateDirectory(ruleStorePath);
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：BCO\\kenny\n結論：同意");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(
+        new CustomerPatchRulePublicationApprovalReceipt("BCO\\kenny", "Approved", approvalRelative, TestHashFile(approvalPath))));
+
+    var request = new CustomerPatchCodexExecutionRequest(
+        scope.CaseRoot, ruleStoreRelative, approvalRelative, receiptRelative, "BCO\\other", Encoding.UTF8.GetBytes("{}"));
+
+    await Assert.ThrowsAsync<InvalidDataException>(() => new CustomerPatchCodexExecutionCommand().ExecuteAsync(request));
+    Assert.False(Directory.Exists(Path.Combine(ruleStorePath, "drafts")));
+    Assert.False(Directory.Exists(Path.Combine(ruleStorePath, "published")));
+}
+
+static async Task CustomerPatchCodexExecutionPersistsExecutionAudit()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var ruleStoreRelative = "rule-sets";
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    var ruleStorePath = Path.Combine(scope.CaseRoot, ruleStoreRelative);
+    Directory.CreateDirectory(ruleStorePath);
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：BCO\\kenny\n結論：同意");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(
+        new CustomerPatchRulePublicationApprovalReceipt("BCO\\kenny", "Approved", approvalRelative, TestHashFile(approvalPath))));
+    var requestBytes = Encoding.UTF8.GetBytes("{\"approvedBy\":\"BCO\\\\kenny\"}");
+    var request = new CustomerPatchCodexExecutionRequest(
+        scope.CaseRoot, ruleStoreRelative, approvalRelative, receiptRelative, "BCO\\kenny", requestBytes);
+
+    var result = await new CustomerPatchCodexExecutionCommand().ExecuteAsync(request);
+    var published = (await new RuleSetStore(ruleStorePath).ListPublishedAsync()).Single();
+
+    Assert.Equal("BCO\\kenny", result.ApprovedBy);
+    Assert.Equal("CodexAgent", result.ExecutedBy);
+    Assert.Equal(Convert.ToHexString(SHA256.HashData(requestBytes)), result.RequestChecksum);
+    Assert.Equal(new RuleExecutionAudit("BCO\\kenny", "CodexAgent", receiptRelative, result.RequestChecksum), published.ExecutionAudit);
+    await Assert.ThrowsAsync<InvalidOperationException>(() => new CustomerPatchCodexExecutionCommand().ExecuteAsync(request));
+}
+
+static async Task CustomerPatchCodexExecutionCliEnforcesRequestBoundary()
+{
+    await using var scope = TestScope.Create();
+    var definition = new CoreTreeComparisonDefinition("customer", "source", "target", "core/customer/tree", "core/customer/evidence", "core/source/tree", "core/source/evidence", "core/target/tree", "core/target/evidence", "core-compare");
+    await new CaseStore(scope.CaseRoot).CreateAsync(CaseManifest.CreateCoreTreeWorkflow(Guid.NewGuid(), "CUST-A", "11SP9", "R38", definition, DateTimeOffset.UtcNow));
+    var approvalRelative = "rule-sets/approval-drafts/customer-patch-common-v1-approval-draft.md";
+    var receiptRelative = "rule-sets/approval-drafts/customer-patch-common-v1.approval.json";
+    var ruleStorePath = Path.Combine(scope.CaseRoot, "rule-sets");
+    var approvalPath = Path.Combine(scope.CaseRoot, approvalRelative);
+    Directory.CreateDirectory(ruleStorePath);
+    Directory.CreateDirectory(Path.GetDirectoryName(approvalPath)!);
+    await File.WriteAllTextAsync(approvalPath, "核准人：BCO\\kenny\n結論：同意");
+    await File.WriteAllTextAsync(Path.Combine(scope.CaseRoot, receiptRelative), JsonSerializer.Serialize(
+        new CustomerPatchRulePublicationApprovalReceipt("BCO\\kenny", "Approved", approvalRelative, TestHashFile(approvalPath))));
+    var invalidRequestPath = Path.Combine(scope.Root, "codex-execution-invalid.json");
+    await File.WriteAllTextAsync(invalidRequestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot = scope.CaseRoot,
+        ruleStoreRelativePath = "rule-sets",
+        approvalEvidenceRelativePath = approvalRelative,
+        approvalReceiptRelativePath = receiptRelative,
+        approvedBy = "BCO\\kenny",
+        executedBy = "BCO\\other"
+    }));
+
+    var invalid = await RunPackageCliAsync("--execute-customer-patch-common-rule", invalidRequestPath);
+
+    Assert.Equal(1, invalid.ExitCode);
+    Assert.True(invalid.StandardError.Contains("executedBy", StringComparison.OrdinalIgnoreCase));
+    Assert.False(Directory.Exists(Path.Combine(ruleStorePath, "drafts")));
+    var validRequestPath = Path.Combine(scope.Root, "codex-execution-valid.json");
+    await File.WriteAllTextAsync(validRequestPath, JsonSerializer.Serialize(new
+    {
+        caseRoot = scope.CaseRoot,
+        ruleStoreRelativePath = "rule-sets",
+        approvalEvidenceRelativePath = approvalRelative,
+        approvalReceiptRelativePath = receiptRelative,
+        approvedBy = "BCO\\kenny"
+    }));
+
+    var preflight = await RunPackageCliAsync("--preflight-codex-customer-patch-common-rule", validRequestPath);
+
+    Assert.True(preflight.ExitCode == 0, preflight.StandardError);
+    Assert.False(Directory.Exists(Path.Combine(ruleStorePath, "drafts")));
+    var valid = await RunPackageCliAsync("--execute-customer-patch-common-rule", validRequestPath);
+
+    Assert.Equal(0, valid.ExitCode);
+    using var output = JsonDocument.Parse(valid.StandardOutput);
+    Assert.Equal("BCO\\kenny", output.RootElement.GetProperty("approvedBy").GetString());
+    Assert.Equal("CodexAgent", output.RootElement.GetProperty("executedBy").GetString());
+    Assert.Equal(TestHashFile(validRequestPath), output.RootElement.GetProperty("requestChecksum").GetString());
 }
 
 static async Task CoreTreeCommandRecordsIncompleteAndAllowsFreshRetry()
@@ -2289,6 +3162,11 @@ static async Task<CoreTreeComparisonPreflightRequest> CreatePreflightRequestAsyn
     {
         await WriteCoreTreeFile(Path.Combine(input.RootPath, "Innovator"), "Client/app.js", content);
         await WriteCoreTreeFile(Path.Combine(input.RootPath, "Innovator"), "Server/app.dll", content);
+        foreach (var file in new[] { "version-primary.md", "integrity.md", "integrity.sha256", "source-provenance.md" })
+            File.Delete(Path.Combine(input.EvidenceReference, file));
+        var evidence = await new CoreTreeEvidenceCommand().WriteAsync(
+            new CoreTreeEvidenceInput("", input.InnovatorVersion, input.RootPath, input.EvidenceReference), "operator");
+        Assert.Equal(CoreTreeEvidenceOperationStatus.Completed, evidence.OperationStatus);
     }
 
     return new CoreTreeComparisonPreflightRequest(
@@ -2463,6 +3341,30 @@ static async Task<CliProcessResult> RunCoreTreeCliAsync(params string[] argument
 
     using var process = new Process { StartInfo = startInfo };
     Assert.True(process.Start(), "Unable to start the Core Tree CLI.");
+    var standardOutput = process.StandardOutput.ReadToEndAsync();
+    var standardError = process.StandardError.ReadToEndAsync();
+    await process.WaitForExitAsync();
+    await Task.WhenAll(standardOutput, standardError);
+    return new CliProcessResult(process.ExitCode, await standardOutput, await standardError);
+}
+
+static async Task<CliProcessResult> RunPackageCliAsync(params string[] arguments)
+{
+    var startInfo = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = ProjectPath(),
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false
+    };
+    startInfo.ArgumentList.Add("run");
+    startInfo.ArgumentList.Add("--project");
+    startInfo.ArgumentList.Add(ProjectPath("tools", "ArasUpgradeOrchestrator.Package.Cli", "ArasUpgradeOrchestrator.Package.Cli.csproj"));
+    startInfo.ArgumentList.Add("--");
+    foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
+
+    using var process = new Process { StartInfo = startInfo };
+    Assert.True(process.Start(), "Unable to start the Package CLI.");
     var standardOutput = process.StandardOutput.ReadToEndAsync();
     var standardError = process.StandardError.ReadToEndAsync();
     await process.WaitForExitAsync();

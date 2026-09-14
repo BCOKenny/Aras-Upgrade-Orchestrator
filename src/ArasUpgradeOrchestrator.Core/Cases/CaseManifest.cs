@@ -32,6 +32,18 @@ public sealed record UpgradeRoute(int Version, IReadOnlyList<UpgradeHop> Hops, D
 
 public sealed record ArtifactLocation(string Kind, string Path, string? HopKey = null);
 
+public sealed record PackageComparisonPreparation(
+    string PreparationId,
+    string SourceVersion,
+    string TargetVersion,
+    string OotbSourceSolutionsRelativePath,
+    string OotbTargetSolutionsRelativePath,
+    string PatchSupportInputRelativePath,
+    string PreparationAttemptRelativePath,
+    DateTimeOffset CreatedAt,
+    string CreatedBy,
+    string? Notes = null);
+
 public sealed record CoreTreeComparisonDefinition(
     string CustomerInputId,
     string SourceOotbInputId,
@@ -75,6 +87,9 @@ public sealed record CaseManifest(
     CoreTreeComparisonDefinition? CoreTreeComparison = null)
 {
     public const int CurrentSchemaVersion = 1;
+
+    [JsonPropertyName("packageComparisonPreparations")]
+    public IReadOnlyList<PackageComparisonPreparation> PackageComparisonPreparations { get; init; } = [];
 
     [JsonIgnore]
     public UpgradeRoute CurrentRoute => Routes.Count > 0

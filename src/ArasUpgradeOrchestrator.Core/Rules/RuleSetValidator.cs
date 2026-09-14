@@ -65,6 +65,9 @@ public static class RuleSetValidator
                 Add(errors, RuleValidationErrorCode.InvalidStepConfiguration, location, "路徑限定更新步驟必須指定目的相對路徑條件。");
             if (step.Kind != RuleStepKind.PreferSourceUnderTargetPath && !string.IsNullOrWhiteSpace(step.TargetPathConstraint))
                 Add(errors, RuleValidationErrorCode.InvalidStepConfiguration, location, "只有路徑限定更新步驟可設定路徑條件。");
+            if (step.Kind == RuleStepKind.CustomerPatchRetainItems &&
+                (propertyNames.Count != 0 || pairs.Count != 0 || !string.IsNullOrWhiteSpace(step.TargetPathConstraint)))
+                Add(errors, RuleValidationErrorCode.InvalidStepConfiguration, location, "Customer-Patch 保留步驟不得設定 Property、值組合或路徑條件。");
         }
 
         return new RuleSetValidationResult(errors);
@@ -74,6 +77,7 @@ public static class RuleSetValidator
     {
         RuleSetKind.Rule1 => step == RuleStepKind.Rule1ItemDisposition,
         RuleSetKind.Rule2 => step is not RuleStepKind.Rule1ItemDisposition,
+        RuleSetKind.CustomerPatchComparison => step == RuleStepKind.CustomerPatchRetainItems,
         _ => false
     };
 

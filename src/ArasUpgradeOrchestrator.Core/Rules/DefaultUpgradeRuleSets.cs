@@ -43,6 +43,12 @@ public static class DefaultUpgradeRuleSets
         ],
         createdAt, actor);
 
+    public static RuleSetDraft CreateCustomerPatchComparisonDraft(string actor, DateTimeOffset createdAt, Guid? ruleSetId = null) => new(
+        Guid.NewGuid(), ruleSetId ?? Guid.NewGuid(), "客戶基準對 Patch／Support 比較共同準則", RuleSetKind.CustomerPatchComparison, RuleSetScope.Common,
+        null, null,
+        [new RuleStepDefinition("customer-patch-retain-items", 1, RuleStepKind.CustomerPatchRetainItems, [], [], null)],
+        createdAt, actor);
+
     private static RuleStepDefinition Step(
         string id,
         int order,

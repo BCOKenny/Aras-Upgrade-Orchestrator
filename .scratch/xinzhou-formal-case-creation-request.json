@@ -1,0 +1,16 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "customerCode": "芯洲",
+  "sourceVersion": "11.0 SP9",
+  "targetVersion": "R38",
+  "customerInputId": "customer-11sp9",
+  "sourceOotbInputId": "ootb-11sp9",
+  "targetOotbInputId": "ootb-r38",
+  "customerTreePath": "core-tree/inputs/customer-11sp9/tree",
+  "customerEvidencePath": "core-tree/inputs/customer-11sp9/evidence",
+  "sourceOotbTreePath": "core-tree/inputs/ootb-11sp9/tree",
+  "sourceOotbEvidencePath": "core-tree/inputs/ootb-11sp9/evidence",
+  "targetOotbTreePath": "core-tree/inputs/ootb-r38/tree",
+  "targetOotbEvidencePath": "core-tree/inputs/ootb-r38/evidence",
+  "comparisonName": "customer-11sp9-To-ootb-r38"
+}

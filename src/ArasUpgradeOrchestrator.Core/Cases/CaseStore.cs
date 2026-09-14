@@ -56,7 +56,26 @@ public sealed class CaseStore
             if (candidate is null || JsonSerializer.Serialize(candidate, JsonOptions) != JsonSerializer.Serialize(existingRoute, JsonOptions))
                 throw new InvalidOperationException($"既有升級路徑版本 {existingRoute.Version} 不得修改或刪除；請建立新版路徑。 ");
         }
+        foreach (var existingPreparation in existing.PackageComparisonPreparations)
+        {
+            var candidate = manifest.PackageComparisonPreparations.SingleOrDefault(item => item.PreparationId == existingPreparation.PreparationId);
+            if (candidate is null || JsonSerializer.Serialize(candidate, JsonOptions) != JsonSerializer.Serialize(existingPreparation, JsonOptions))
+                throw new InvalidOperationException($"既有 Package 比較計畫 {existingPreparation.PreparationId} 不得修改或刪除；請新增新的比較計畫。 ");
+        }
         await WriteAtomicallyAsync(manifest, cancellationToken);
+    }
+
+    public async Task<CaseManifest> AddPackageComparisonPreparationAsync(
+        PackageComparisonPreparation preparation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preparation);
+        var existing = await LoadAsync(cancellationToken);
+        if (existing.PackageComparisonPreparations.Any(item => string.Equals(item.PreparationId, preparation.PreparationId, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException($"Package 比較計畫 {preparation.PreparationId} 已存在。 ");
+        var updated = existing with { PackageComparisonPreparations = [.. existing.PackageComparisonPreparations, preparation] };
+        await SavePlanningUpdateAsync(updated, cancellationToken);
+        return updated;
     }
 
     private async Task WriteAtomicallyAsync(CaseManifest manifest, CancellationToken cancellationToken)
@@ -90,20 +109,56 @@ public sealed class CaseStore
         {
             if (manifest.CurrentRouteVersion != 0)
                 throw new InvalidDataException("未建立 Package／DB 工作流時目前升級路徑版本必須為 0。 ");
-            if (manifest.CoreTreeComparison is null)
-                throw new InvalidDataException("沒有升級路徑的案件必須包含 Core Tree 工作流設定。 ");
-            manifest.CoreTreeComparison.Validate();
-            return;
+            if (manifest.CoreTreeComparison is null && manifest.PackageComparisonPreparations.Count == 0)
+                throw new InvalidDataException("沒有升級路徑的案件必須包含 Core Tree 工作流設定或 Package 比較計畫。 ");
+            manifest.CoreTreeComparison?.Validate();
         }
-        if (manifest.Routes.All(route => route.Version != manifest.CurrentRouteVersion))
+        if (manifest.Routes.Count > 0 && manifest.Routes.All(route => route.Version != manifest.CurrentRouteVersion))
             throw new InvalidDataException("案件清單沒有有效的目前升級路徑。 ");
         if (manifest.Routes.Select(route => route.Version).Distinct().Count() != manifest.Routes.Count)
             throw new InvalidDataException("案件清單包含重複的升級路徑版本。 ");
         manifest.CoreTreeComparison?.Validate();
+        ValidatePreparations(manifest.PackageComparisonPreparations);
         foreach (var route in manifest.Routes)
         {
             var validatedRoute = UpgradeRoute.Create(route.Version, route.Hops, route.CreatedAt);
             _ = CaseManifest.Create(manifest.CaseId, manifest.CustomerCode, manifest.SourceVersion, manifest.TargetVersion, validatedRoute, manifest.CreatedAt, manifest.ArtifactLocations, manifest.CoreTreeComparison);
         }
+    }
+
+    private static void ValidatePreparations(IReadOnlyList<PackageComparisonPreparation> preparations)
+    {
+        if (preparations.Select(item => item.PreparationId).Distinct(StringComparer.OrdinalIgnoreCase).Count() != preparations.Count)
+            throw new InvalidDataException("案件清單包含重複的 Package 比較計畫識別。 ");
+        foreach (var preparation in preparations)
+        {
+            if (string.IsNullOrWhiteSpace(preparation.PreparationId) || string.IsNullOrWhiteSpace(preparation.SourceVersion) ||
+                string.IsNullOrWhiteSpace(preparation.TargetVersion) || string.IsNullOrWhiteSpace(preparation.CreatedBy))
+                throw new InvalidDataException("Package 比較計畫缺少必要識別、版本或建立者。 ");
+            if (string.Equals(preparation.SourceVersion, preparation.TargetVersion, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Package 比較計畫的來源與目標版本不可相同。 ");
+            var paths = new[]
+            {
+                preparation.OotbSourceSolutionsRelativePath, preparation.OotbTargetSolutionsRelativePath,
+                preparation.PatchSupportInputRelativePath, preparation.PreparationAttemptRelativePath
+            };
+            if (paths.Any(path => !IsSafeRelativePath(path)))
+                throw new InvalidDataException("Package 比較計畫路徑必須是案件根目錄下的安全相對路徑。 ");
+            if (paths.Take(3).Any(input => PathsOverlap(input, preparation.PreparationAttemptRelativePath)))
+                throw new InvalidDataException("Package 比較 attempt 輸出不得與任何輸入目錄重疊。 ");
+        }
+    }
+
+    private static bool IsSafeRelativePath(string? path) => !string.IsNullOrWhiteSpace(path) && !Path.IsPathRooted(path) &&
+        !path.StartsWith('\\') && !path.StartsWith('/') && path.Split(new[] { '/', '\\' }, StringSplitOptions.None)
+            .All(segment => segment is not "" and not "." and not "..");
+
+    private static bool PathsOverlap(string left, string right)
+    {
+        var normalizedLeft = left.Replace('/', '\\').TrimEnd('\\');
+        var normalizedRight = right.Replace('/', '\\').TrimEnd('\\');
+        return string.Equals(normalizedLeft, normalizedRight, StringComparison.OrdinalIgnoreCase) ||
+               normalizedLeft.StartsWith(normalizedRight + "\\", StringComparison.OrdinalIgnoreCase) ||
+               normalizedRight.StartsWith(normalizedLeft + "\\", StringComparison.OrdinalIgnoreCase);
     }
 }

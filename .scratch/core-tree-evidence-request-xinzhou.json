@@ -1,0 +1,30 @@
+{
+  "caseRoot": "K:\\70.ArasUpgradeCases\\芯洲",
+  "caseId": "芯洲",
+  "sourceVersion": "11.0 SP9",
+  "sourceSlug": "11sp9",
+  "targetVersion": "R38",
+  "targetSlug": "r38",
+  "actor": "BCO\\kenny",
+  "executionMode": "EVIDENCE_WRITE",
+  "inputs": [
+    {
+      "inputId": "customer-11sp9",
+      "innovatorVersion": "11.0 SP9",
+      "treePath": "core-tree\\inputs\\customer-11sp9\\tree",
+      "evidencePath": "core-tree\\inputs\\customer-11sp9\\evidence"
+    },
+    {
+      "inputId": "ootb-11sp9",
+      "innovatorVersion": "11.0 SP9",
+      "treePath": "core-tree\\inputs\\ootb-11sp9\\tree",
+      "evidencePath": "core-tree\\inputs\\ootb-11sp9\\evidence"
+    },
+    {
+      "inputId": "ootb-r38",
+      "innovatorVersion": "R38",
+      "treePath": "core-tree\\inputs\\ootb-r38\\tree",
+      "evidencePath": "core-tree\\inputs\\ootb-r38\\evidence"
+    }
+  ]
+}
